@@ -41,15 +41,24 @@ export function useConversationBackend() {
       throw new Error(`Upload failed: ${uploadError.message}`);
     }
 
-    // Trigger transcription
+    // Trigger transcription (multipart upload; use direct call)
     const formData = new FormData();
     formData.append("conversationId", conversationId);
     formData.append("audio", file);
-    const transcribeRes = await supabaseDevice.functions.invoke("transcribe", {
+
+    const transcribeUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/transcribe`;
+    const transcribeResponse = await fetch(transcribeUrl, {
+      method: "POST",
+      headers: {
+        "x-device-key": deviceKey,
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+      },
       body: formData,
     });
-    if (transcribeRes.error) {
-      throw new Error(transcribeRes.error.message || "Transcription failed");
+    if (!transcribeResponse.ok) {
+      const txt = await transcribeResponse.text().catch(() => "");
+      throw new Error(`Transcription failed (${transcribeResponse.status}): ${txt || ""}`.trim());
     }
 
     // Trigger summarization

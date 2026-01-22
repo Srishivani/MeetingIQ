@@ -47,11 +47,12 @@ export function ConversationRecorder({
   const { state, error, durationMs, blob, mimeType, start, pause, resume, stop, reset } = useMediaRecorder();
   const [isSaving, setIsSaving] = React.useState(false);
   const [saveProgress, setSaveProgress] = React.useState(0);
-  const [savingMode, setSavingMode] = React.useState<"local" | "backend">("local");
+  const [activeSaveMode, setActiveSaveMode] = React.useState<"local" | "backend">("local");
 
   const saveBlob = React.useCallback(
-    async (audioBlob: Blob, title: string) => {
+    async (audioBlob: Blob, title: string, mode: "local" | "backend") => {
       setIsSaving(true);
+      setActiveSaveMode(mode);
       setSaveProgress(15);
 
       const derivedDuration = durationMs || (await readAudioDurationMs(audioBlob));
@@ -65,11 +66,11 @@ export function ConversationRecorder({
         mimeType: audioBlob.type || mimeType || "audio/webm",
         sizeBytes: audioBlob.size,
         audioBlob,
-        status: savingMode === "local" ? "local" : "uploading",
+        status: mode === "local" ? "local" : "uploading",
       };
       setSaveProgress(70);
       
-      if (savingMode === "local") {
+      if (mode === "local") {
         await onCreate(record);
       } else {
         const conversationId = await uploadAndTranscribe(audioBlob, {
@@ -85,9 +86,9 @@ export function ConversationRecorder({
       reset();
       setIsSaving(false);
       setSaveProgress(0);
-      setSavingMode("local");
+      setActiveSaveMode("local");
     },
-    [durationMs, mimeType, onCreate, reset, savingMode, uploadAndTranscribe, navigate],
+    [durationMs, mimeType, onCreate, reset, uploadAndTranscribe, navigate],
   );
 
   const onPickUpload = async (file: File) => {
@@ -95,7 +96,7 @@ export function ConversationRecorder({
     if (file.type && !okTypes.includes(file.type)) {
       // still allow — browsers sometimes omit accurate mime
     }
-    await saveBlob(file, fileTitle("Upload"));
+    await saveBlob(file, fileTitle("Upload"), "local");
   };
 
   const previewUrl = React.useMemo(() => {
@@ -169,10 +170,10 @@ export function ConversationRecorder({
           <div className="space-y-3">
             <audio controls src={previewUrl} className="w-full" />
             <div className="flex flex-wrap gap-2">
-              <Button onClick={() => { setSavingMode("local"); void saveBlob(blob, fileTitle("Recording")); }} disabled={isSaving}>
+              <Button onClick={() => { void saveBlob(blob, fileTitle("Recording"), "local"); }} disabled={isSaving}>
                 Save locally (IndexedDB)
               </Button>
-              <Button onClick={() => { setSavingMode("backend"); void saveBlob(blob, fileTitle("Recording")); }} disabled={isSaving}>
+              <Button onClick={() => { void saveBlob(blob, fileTitle("Recording"), "backend"); }} disabled={isSaving}>
                 Upload + Transcribe + Summarize
               </Button>
               <Button variant="outline" onClick={reset} disabled={isSaving}>
@@ -184,7 +185,9 @@ export function ConversationRecorder({
 
         {isSaving ? (
           <div className="space-y-2">
-            <div className="text-sm text-muted-foreground">Saving to IndexedDB…</div>
+            <div className="text-sm text-muted-foreground">
+              {activeSaveMode === "local" ? "Saving to IndexedDB…" : "Uploading to backend…"}
+            </div>
             <Progress value={saveProgress} />
           </div>
         ) : null}
