@@ -1,4 +1,4 @@
-export type ConversationStatus = "local";
+export type ConversationStatus = "local" | "uploading" | "transcribing" | "ready";
 
 export type ConversationRecord = {
   id: string;
