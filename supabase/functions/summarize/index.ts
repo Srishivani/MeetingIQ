@@ -40,11 +40,23 @@ serve(async (req) => {
       .eq("conversation_id", conversationId)
       .order("start_ms", { ascending: true });
 
-    if (chunksError || !chunks || chunks.length === 0) {
-      throw new Error("No transcript found");
+    if (chunksError) {
+      console.error("[summarize] Failed to load transcript:", chunksError);
+      return new Response(
+        JSON.stringify({ success: false, error: chunksError.message }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    const fullTranscript = chunks.map((c) => c.text).join(" ");
+    if (!chunks || chunks.length === 0) {
+      // Not an error: transcription may still be running.
+      return new Response(
+        JSON.stringify({ success: false, error: "No transcript found yet" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const fullTranscript = chunks.map((c: { text: string }) => c.text).join(" ");
 
     const systemPrompt = `You are a professional conversation analyst. Generate a structured summary from the transcript.
 Return ONLY valid JSON with these keys:
@@ -56,7 +68,14 @@ Return ONLY valid JSON with these keys:
 
 Be concise. Use bullet points. Return valid JSON only.`;
 
-    const userPrompt = `Transcript:\n${fullTranscript}\n\nChunk timestamps (for quotes):\n${chunks.map((c, i) => `[${i}] ${c.start_ms}ms-${c.end_ms}ms: ${c.text.slice(0, 40)}...`).join("\n")}`;
+    const userPrompt = `Transcript:\n${fullTranscript}\n\nChunk timestamps (for quotes):\n${chunks
+      .map(
+        (
+          c: { start_ms: number; end_ms: number; text: string },
+          i: number,
+        ) => `[${i}] ${c.start_ms}ms-${c.end_ms}ms: ${c.text.slice(0, 40)}...`,
+      )
+      .join("\n")}`;
 
     const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
 
