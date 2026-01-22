@@ -6,6 +6,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useConversations } from "@/hooks/useConversations";
 import { formatDuration } from "@/lib/conversations";
 import { ConversationIntelligence } from "@/components/conversations/ConversationIntelligence";
+import { supabaseDevice } from "@/integrations/supabase/clientDevice";
+import { getDeviceKey } from "@/lib/deviceKey";
 
 const Conversation = () => {
   const { id } = useParams();
@@ -23,19 +25,59 @@ const Conversation = () => {
       if (!id) return;
       setIsLoading(true);
       setError(null);
+
+      // 1) Try local (IndexedDB) first
       const rec = await get(id);
-      if (!rec) {
-        setError("Conversation not found in this browser.");
+      if (rec) {
+        setTitle(rec.title);
+        setCreatedAt(rec.createdAt);
+        setDurationMs(rec.durationMs);
+        const url = URL.createObjectURL(rec.audioBlob);
+        revoked = url;
+        setAudioUrl(url);
         setIsLoading(false);
         return;
       }
 
-      setTitle(rec.title);
-      setCreatedAt(rec.createdAt);
-      setDurationMs(rec.durationMs);
-      const url = URL.createObjectURL(rec.audioBlob);
-      revoked = url;
-      setAudioUrl(url);
+      // 2) Fallback to backend (private storage + DB metadata)
+      const { data: conv, error: convErr } = await supabaseDevice
+        .from("conversations")
+        .select("title, created_at, duration_ms, mime_type")
+        .eq("id", id)
+        .maybeSingle();
+
+      if (convErr) {
+        setError(convErr.message);
+        setIsLoading(false);
+        return;
+      }
+
+      if (!conv) {
+        setError("Conversation not found.");
+        setIsLoading(false);
+        return;
+      }
+
+      setTitle(conv.title ?? "Conversation");
+      setCreatedAt(new Date(conv.created_at).getTime());
+      setDurationMs(conv.duration_ms ?? 0);
+
+      const deviceKey = getDeviceKey();
+      const rawExt = (conv.mime_type ?? "audio/webm").split("/")[1] || "webm";
+      const ext = rawExt === "mpeg" ? "mp3" : rawExt;
+      const path = `${deviceKey}/${id}.${ext}`;
+
+      const { data: signed, error: signErr } = await supabaseDevice.storage
+        .from("conversation-audio")
+        .createSignedUrl(path, 60 * 10);
+
+      if (signErr || !signed?.signedUrl) {
+        setError(signErr?.message || "Failed to load audio");
+        setIsLoading(false);
+        return;
+      }
+
+      setAudioUrl(signed.signedUrl);
       setIsLoading(false);
     };
     void run();
@@ -71,7 +113,7 @@ const Conversation = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Audio</CardTitle>
-                <CardDescription>Playback is local; nothing is uploaded.</CardDescription>
+                <CardDescription>Playback is from your device (local) or your private backend storage.</CardDescription>
               </CardHeader>
               <CardContent>
                 {audioUrl ? <audio controls className="w-full" src={audioUrl} /> : null}
