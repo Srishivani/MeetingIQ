@@ -3,8 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useMediaRecorder } from "@/hooks/useMediaRecorder";
+import { useConversationBackend } from "@/hooks/useConversationBackend";
 import type { ConversationRecord } from "@/lib/conversations";
 import { formatDuration } from "@/lib/conversations";
+import { useNavigate } from "react-router-dom";
 
 function fileTitle(prefix: string) {
   const d = new Date();
@@ -39,10 +41,13 @@ export function ConversationRecorder({
 }: {
   onCreate: (record: ConversationRecord) => Promise<void> | void;
 }) {
+  const navigate = useNavigate();
   const inputRef = React.useRef<HTMLInputElement | null>(null);
+  const { uploadAndTranscribe } = useConversationBackend();
   const { state, error, durationMs, blob, mimeType, start, pause, resume, stop, reset } = useMediaRecorder();
   const [isSaving, setIsSaving] = React.useState(false);
   const [saveProgress, setSaveProgress] = React.useState(0);
+  const [savingMode, setSavingMode] = React.useState<"local" | "backend">("local");
 
   const saveBlob = React.useCallback(
     async (audioBlob: Blob, title: string) => {
@@ -60,16 +65,29 @@ export function ConversationRecorder({
         mimeType: audioBlob.type || mimeType || "audio/webm",
         sizeBytes: audioBlob.size,
         audioBlob,
-        status: "local",
+        status: savingMode === "local" ? "local" : "uploading",
       };
       setSaveProgress(70);
-      await onCreate(record);
+      
+      if (savingMode === "local") {
+        await onCreate(record);
+      } else {
+        const conversationId = await uploadAndTranscribe(audioBlob, {
+          title,
+          durationMs: derivedDuration,
+          mimeType: record.mimeType,
+          sizeBytes: record.sizeBytes,
+        });
+        navigate(`/c/${conversationId}`);
+      }
+      
       setSaveProgress(100);
       reset();
       setIsSaving(false);
       setSaveProgress(0);
+      setSavingMode("local");
     },
-    [durationMs, mimeType, onCreate, reset],
+    [durationMs, mimeType, onCreate, reset, savingMode, uploadAndTranscribe, navigate],
   );
 
   const onPickUpload = async (file: File) => {
@@ -151,8 +169,11 @@ export function ConversationRecorder({
           <div className="space-y-3">
             <audio controls src={previewUrl} className="w-full" />
             <div className="flex flex-wrap gap-2">
-              <Button onClick={() => void saveBlob(blob, fileTitle("Recording"))} disabled={isSaving}>
-                Save
+              <Button onClick={() => { setSavingMode("local"); void saveBlob(blob, fileTitle("Recording")); }} disabled={isSaving}>
+                Save locally (IndexedDB)
+              </Button>
+              <Button onClick={() => { setSavingMode("backend"); void saveBlob(blob, fileTitle("Recording")); }} disabled={isSaving}>
+                Upload + Transcribe + Summarize
               </Button>
               <Button variant="outline" onClick={reset} disabled={isSaving}>
                 Record again
@@ -169,7 +190,7 @@ export function ConversationRecorder({
         ) : null}
       </CardContent>
       <CardFooter className="text-xs text-muted-foreground">
-        Next: transcription + summaries require a secure backend to protect API keys.
+        Upload to the backend to unlock transcription, summaries, and Q&A with citations.
       </CardFooter>
     </Card>
   );

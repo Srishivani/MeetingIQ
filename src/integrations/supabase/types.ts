@@ -14,7 +14,124 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      conversations: {
+        Row: {
+          created_at: string
+          device_key: string
+          duration_ms: number
+          id: string
+          mime_type: string
+          size_bytes: number
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          device_key: string
+          duration_ms: number
+          id?: string
+          mime_type: string
+          size_bytes: number
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          device_key?: string
+          duration_ms?: number
+          id?: string
+          mime_type?: string
+          size_bytes?: number
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      summaries: {
+        Row: {
+          action_items: string[] | null
+          conversation_id: string
+          created_at: string
+          decisions: string[] | null
+          id: string
+          key_points: string[] | null
+          notable_quotes: Json | null
+          open_questions: string[] | null
+        }
+        Insert: {
+          action_items?: string[] | null
+          conversation_id: string
+          created_at?: string
+          decisions?: string[] | null
+          id?: string
+          key_points?: string[] | null
+          notable_quotes?: Json | null
+          open_questions?: string[] | null
+        }
+        Update: {
+          action_items?: string[] | null
+          conversation_id?: string
+          created_at?: string
+          decisions?: string[] | null
+          id?: string
+          key_points?: string[] | null
+          notable_quotes?: Json | null
+          open_questions?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "summaries_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: true
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      transcript_chunks: {
+        Row: {
+          conversation_id: string
+          created_at: string
+          embedding: string | null
+          end_ms: number
+          id: string
+          speaker: string | null
+          start_ms: number
+          text: string
+        }
+        Insert: {
+          conversation_id: string
+          created_at?: string
+          embedding?: string | null
+          end_ms: number
+          id?: string
+          speaker?: string | null
+          start_ms: number
+          text: string
+        }
+        Update: {
+          conversation_id?: string
+          created_at?: string
+          embedding?: string | null
+          end_ms?: number
+          id?: string
+          speaker?: string | null
+          start_ms?: number
+          text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transcript_chunks_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

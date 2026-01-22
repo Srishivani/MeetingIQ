@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useConversations } from "@/hooks/useConversations";
 import { formatDuration } from "@/lib/conversations";
+import { ConversationIntelligence } from "@/components/conversations/ConversationIntelligence";
 
 const Conversation = () => {
   const { id } = useParams();
@@ -79,38 +80,7 @@ const Conversation = () => {
           </div>
 
           <div className="lg:col-span-3">
-            <Card>
-              <CardHeader>
-                <CardTitle>Intelligence</CardTitle>
-                <CardDescription>
-                  Transcription, summaries, and Q&A will appear here once a secure backend is enabled.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Tabs defaultValue="transcript">
-                  <TabsList>
-                    <TabsTrigger value="transcript">Transcript</TabsTrigger>
-                    <TabsTrigger value="summary">Summary</TabsTrigger>
-                    <TabsTrigger value="ask">Ask</TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="transcript" className="pt-4">
-                    <div className="rounded-md border bg-muted p-4 text-sm text-muted-foreground">
-                      Not available in frontend-only mode.
-                    </div>
-                  </TabsContent>
-                  <TabsContent value="summary" className="pt-4">
-                    <div className="rounded-md border bg-muted p-4 text-sm text-muted-foreground">
-                      Not available in frontend-only mode.
-                    </div>
-                  </TabsContent>
-                  <TabsContent value="ask" className="pt-4">
-                    <div className="rounded-md border bg-muted p-4 text-sm text-muted-foreground">
-                      Not available in frontend-only mode.
-                    </div>
-                  </TabsContent>
-                </Tabs>
-              </CardContent>
-            </Card>
+            {id ? <ConversationIntelligence conversationId={id} /> : null}
           </div>
         </div>
       </div>
