@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import type { ConversationRecord } from "@/lib/conversations";
+import type { BackendConversation } from "@/hooks/useBackendConversations";
 import { formatDuration } from "@/lib/conversations";
 
 export function ConversationList({
@@ -10,7 +10,7 @@ export function ConversationList({
   error,
   onDelete,
 }: {
-  items: Omit<ConversationRecord, "audioBlob">[];
+  items: BackendConversation[];
   isLoading: boolean;
   error: string | null;
   onDelete: (id: string) => Promise<void> | void;
@@ -19,7 +19,7 @@ export function ConversationList({
     <Card>
       <CardHeader>
         <CardTitle>Conversations</CardTitle>
-        <CardDescription>Everything is stored locally in this browser.</CardDescription>
+        <CardDescription>Saved to your private backend storage on this device.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         {error ? <div className="text-sm text-destructive">{error}</div> : null}
