@@ -66,8 +66,13 @@ export function useConversationBackend() {
       body: { conversationId },
     });
     if (summarizeRes.error) {
-      // Keep non-blocking? For now, treat as error because UI expects summary.
       throw new Error(summarizeRes.error.message || "Summarization failed");
+    }
+
+    // Summarization may legitimately return { success:false } while transcription is still persisting.
+    // Don't fail the whole flow; the conversation page can refresh/poll.
+    if ((summarizeRes.data as any)?.success === false) {
+      console.log("[backend] Summarize pending:", (summarizeRes.data as any)?.error);
     }
 
     return conversationId;

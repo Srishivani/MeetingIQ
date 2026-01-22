@@ -1,6 +1,13 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
+type ElevenLabsWord = {
+  text: string;
+  start: number;
+  end: number;
+  type?: string;
+};
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, x-device-key, apikey, content-type",
@@ -49,6 +56,8 @@ serve(async (req) => {
     transcribeFormData.append("model_id", "scribe_v2");
     transcribeFormData.append("tag_audio_events", "false");
     transcribeFormData.append("diarize", "false");
+    // Ensure word-level timestamps are included
+    transcribeFormData.append("timestamps_granularity", "word");
 
     const response = await fetch("https://api.elevenlabs.io/v1/speech-to-text", {
       method: "POST",
@@ -65,10 +74,15 @@ serve(async (req) => {
     }
 
     const transcription = await response.json();
-    console.log("[transcribe] Transcription received, processing words");
+    console.log(
+      "[transcribe] Transcription received",
+      JSON.stringify({ hasText: !!transcription?.text, words: transcription?.words?.length ?? 0 })
+    );
 
     // Insert transcript chunks (every ~5 words or 10s, whichever is first)
-    const words = transcription.words || [];
+    const rawWords: ElevenLabsWord[] = Array.isArray(transcription.words) ? (transcription.words as ElevenLabsWord[]) : [];
+    // Some responses include spacing tokens; keep actual words only.
+    const words = rawWords.filter((w) => (w.type ?? "word") === "word" && typeof w.text === "string");
     const chunks: Array<{ text: string; start_ms: number; end_ms: number }> = [];
     let buffer: typeof words = [];
     let bufferStartMs = 0;
@@ -91,13 +105,24 @@ serve(async (req) => {
 
     console.log(`[transcribe] Created ${chunks.length} chunks`);
 
+    // Fallback: if ElevenLabs didn't return word timestamps, store the full text as one chunk.
+    if (chunks.length === 0 && typeof transcription?.text === "string" && transcription.text.trim()) {
+      chunks.push({ text: transcription.text.trim(), start_ms: 0, end_ms: 0 });
+      console.log("[transcribe] Fallback to single chunk from transcription.text");
+    }
+
     for (const chunk of chunks) {
-      await supabase.from("transcript_chunks").insert({
+      const { error: insertErr } = await supabase.from("transcript_chunks").insert({
         conversation_id: conversationId,
         text: chunk.text,
         start_ms: chunk.start_ms,
         end_ms: chunk.end_ms,
       });
+
+      if (insertErr) {
+        console.error("[transcribe] Failed to insert chunk:", insertErr);
+        throw new Error("Failed to save transcript chunks");
+      }
     }
 
     // Update conversation to ready
