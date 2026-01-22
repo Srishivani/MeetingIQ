@@ -1,5 +1,5 @@
 import * as React from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabaseDevice } from "@/integrations/supabase/clientDevice";
 import { getDeviceKey } from "@/lib/deviceKey";
 
 export function useConversationBackend() {
@@ -12,7 +12,7 @@ export function useConversationBackend() {
     const deviceKey = getDeviceKey();
 
     // Create conversation record in DB
-    const { data: conv, error: convError } = await supabase
+    const { data: conv, error: convError } = await supabaseDevice
       .from("conversations")
       .insert({
         device_key: deviceKey,
@@ -33,9 +33,9 @@ export function useConversationBackend() {
 
     // Upload audio to storage
     const path = `${deviceKey}/${conversationId}.${metadata.mimeType.split("/")[1] || "webm"}`;
-    const { error: uploadError } = await supabase.storage
+    const { error: uploadError } = await supabaseDevice.storage
       .from("conversation-audio")
-      .upload(path, file);
+      .upload(path, file, { contentType: metadata.mimeType });
 
     if (uploadError) {
       throw new Error(`Upload failed: ${uploadError.message}`);
@@ -45,58 +45,33 @@ export function useConversationBackend() {
     const formData = new FormData();
     formData.append("conversationId", conversationId);
     formData.append("audio", file);
-
-    const transcribeUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/transcribe`;
-    const transcribeResponse = await fetch(transcribeUrl, {
-      method: "POST",
-      headers: {
-        "x-device-key": deviceKey,
-        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-        authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-      },
+    const transcribeRes = await supabaseDevice.functions.invoke("transcribe", {
       body: formData,
     });
-
-    if (!transcribeResponse.ok) {
-      throw new Error("Transcription failed");
+    if (transcribeRes.error) {
+      throw new Error(transcribeRes.error.message || "Transcription failed");
     }
 
     // Trigger summarization
-    const summarizeUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/summarize`;
-    await fetch(summarizeUrl, {
-      method: "POST",
-      headers: {
-        "x-device-key": deviceKey,
-        "content-type": "application/json",
-        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-        authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-      },
-      body: JSON.stringify({ conversationId }),
+    const summarizeRes = await supabaseDevice.functions.invoke("summarize", {
+      body: { conversationId },
     });
+    if (summarizeRes.error) {
+      // Keep non-blocking? For now, treat as error because UI expects summary.
+      throw new Error(summarizeRes.error.message || "Summarization failed");
+    }
 
     return conversationId;
   }, []);
 
   const askQuestion = React.useCallback(async (conversationId: string, question: string) => {
-    const deviceKey = getDeviceKey();
-    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ask`;
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "x-device-key": deviceKey,
-        "content-type": "application/json",
-        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-        authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-      },
-      body: JSON.stringify({ conversationId, question }),
+    const res = await supabaseDevice.functions.invoke("ask", {
+      body: { conversationId, question },
     });
-
-    if (!response.ok) {
-      throw new Error("Question failed");
+    if (res.error) {
+      throw new Error(res.error.message || "Question failed");
     }
-
-    const data = await response.json();
-    return data as { answer: string; citations: Array<{ text: string; timestamp_ms: number }> };
+    return res.data as { answer: string; citations: Array<{ text: string; timestamp_ms: number }> };
   }, []);
 
   return { uploadAndTranscribe, askQuestion };

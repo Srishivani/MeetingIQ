@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { supabase } from "@/integrations/supabase/client";
+import { supabaseDevice } from "@/integrations/supabase/clientDevice";
 import { useConversationBackend } from "@/hooks/useConversationBackend";
 import { formatDuration } from "@/lib/conversations";
 
@@ -30,12 +30,12 @@ export function ConversationIntelligence({ conversationId }: { conversationId: s
       setError(null);
       try {
         const [transcriptRes, summaryRes] = await Promise.all([
-          supabase
+          supabaseDevice
             .from("transcript_chunks")
             .select("text, start_ms, end_ms")
             .eq("conversation_id", conversationId)
             .order("start_ms", { ascending: true }),
-          supabase
+          supabaseDevice
             .from("summaries")
             .select("key_points, decisions, action_items, open_questions, notable_quotes")
             .eq("conversation_id", conversationId)
