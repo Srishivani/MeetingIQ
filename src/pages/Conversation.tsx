@@ -2,12 +2,13 @@ import * as React from "react";
 import { Link, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useConversations } from "@/hooks/useConversations";
 import { formatDuration } from "@/lib/conversations";
 import { ConversationIntelligence } from "@/components/conversations/ConversationIntelligence";
+import { MeetingMinutes } from "@/components/conversations/MeetingMinutes";
 import { supabaseDevice } from "@/integrations/supabase/clientDevice";
 import { getDeviceKey } from "@/lib/deviceKey";
+import { useMeetingItems } from "@/hooks/useMeetingItems";
 
 const Conversation = () => {
   const { id } = useParams();
@@ -18,6 +19,14 @@ const Conversation = () => {
   const [createdAt, setCreatedAt] = React.useState<number>(0);
   const [durationMs, setDurationMs] = React.useState<number>(0);
   const [audioUrl, setAudioUrl] = React.useState<string | null>(null);
+  const [summary, setSummary] = React.useState<{
+    key_points?: string[];
+    decisions?: string[];
+    action_items?: string[];
+    open_questions?: string[];
+  } | null>(null);
+
+  const { items, grouped, removeItem } = useMeetingItems(id ?? null);
 
   React.useEffect(() => {
     let revoked: string | null = null;
@@ -61,6 +70,17 @@ const Conversation = () => {
       setTitle(conv.title ?? "Conversation");
       setCreatedAt(new Date(conv.created_at).getTime());
       setDurationMs(conv.duration_ms ?? 0);
+
+      // Fetch summary
+      const { data: summaryData } = await supabaseDevice
+        .from("summaries")
+        .select("key_points, decisions, action_items, open_questions")
+        .eq("conversation_id", id)
+        .maybeSingle();
+
+      if (summaryData) {
+        setSummary(summaryData);
+      }
 
       const deviceKey = getDeviceKey();
       const rawExt = (conv.mime_type ?? "audio/webm").split("/")[1] || "webm";
@@ -121,8 +141,20 @@ const Conversation = () => {
             </Card>
           </div>
 
-          <div className="lg:col-span-3">
+          <div className="lg:col-span-3 space-y-4">
             {id ? <ConversationIntelligence conversationId={id} /> : null}
+            
+            {/* Meeting Minutes export */}
+            {id && !isLoading && (
+              <MeetingMinutes
+                title={title}
+                date={new Date(createdAt)}
+                durationMs={durationMs}
+                items={items}
+                grouped={grouped}
+                summary={summary}
+              />
+            )}
           </div>
         </div>
       </div>
