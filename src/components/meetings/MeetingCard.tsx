@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { 
   Calendar, Clock, MapPin, Users, Video, Building, 
-  Play, MoreHorizontal, Trash2, ExternalLink, CheckCircle2, Mail
+  Play, MoreHorizontal, Trash2, ExternalLink, CheckCircle2, Mail, Pencil
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -14,14 +14,29 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { Meeting } from "@/hooks/useMeetings";
+import type { Meeting, MeetingType, AgendaItem } from "@/hooks/useMeetings";
 import { buildMailtoLinkFromMeeting, buildBulkMailtoLink, openMailtoLink } from "@/lib/meetingInvite";
+import { EditMeetingDialog } from "./EditMeetingDialog";
 
 interface MeetingCardProps {
   meeting: Meeting;
+  meetingTypes?: MeetingType[];
   onStart?: (id: string) => void;
   onDelete?: (id: string) => void;
   onComplete?: (id: string) => void;
+  onUpdateMeeting?: (id: string, updates: Partial<{
+    title: string;
+    description?: string;
+    meetingTypeId?: string;
+    scheduledAt: Date;
+    durationMinutes: number;
+    location?: string;
+    locationType: "in-person" | "virtual" | "hybrid";
+    agenda?: AgendaItem[];
+  }>) => Promise<void>;
+  onAddParticipant?: (meetingId: string, participant: { name: string; email?: string; role?: "organizer" | "attendee" | "optional" }) => Promise<void>;
+  onRemoveParticipant?: (participantId: string) => Promise<void>;
+  onUpdateParticipant?: (participantId: string, updates: { name?: string; email?: string | null; role?: "organizer" | "attendee" | "optional" }) => Promise<void>;
 }
 
 function formatTime(date: Date) {
@@ -54,12 +69,24 @@ const statusStyles: Record<string, string> = {
   "cancelled": "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20",
 };
 
-export function MeetingCard({ meeting, onStart, onDelete, onComplete }: MeetingCardProps) {
+export function MeetingCard({ 
+  meeting, 
+  meetingTypes = [],
+  onStart, 
+  onDelete, 
+  onComplete,
+  onUpdateMeeting,
+  onAddParticipant,
+  onRemoveParticipant,
+  onUpdateParticipant,
+}: MeetingCardProps) {
+  const [editOpen, setEditOpen] = React.useState(false);
   const LocationIcon = locationIcons[meeting.locationType];
   const isUpcoming = meeting.status === "scheduled" && meeting.scheduledAt >= new Date();
   const isPast = meeting.status === "scheduled" && meeting.scheduledAt < new Date();
 
   return (
+    <>
     <Card className={`overflow-hidden transition-all hover:shadow-md ${isPast ? "opacity-60" : ""}`}>
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-3">
@@ -182,6 +209,14 @@ export function MeetingCard({ meeting, onStart, onDelete, onComplete }: MeetingC
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  {/* Edit Meeting */}
+                  {onUpdateMeeting && (
+                    <DropdownMenuItem onClick={() => setEditOpen(true)}>
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Edit Meeting
+                    </DropdownMenuItem>
+                  )}
+                  {onUpdateMeeting && <DropdownMenuSeparator />}
                   {/* Send Invites */}
                   {meeting.participants && meeting.participants.length > 0 && (
                     <>
@@ -249,10 +284,25 @@ export function MeetingCard({ meeting, onStart, onDelete, onComplete }: MeetingC
                   +{meeting.agenda.length - 3} more items
                 </li>
               )}
-            </ul>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+              </ul>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Edit Meeting Dialog */}
+      {onUpdateMeeting && onAddParticipant && onRemoveParticipant && onUpdateParticipant && (
+        <EditMeetingDialog
+          meeting={meeting}
+          meetingTypes={meetingTypes}
+          onUpdateMeeting={onUpdateMeeting}
+          onAddParticipant={onAddParticipant}
+          onRemoveParticipant={onRemoveParticipant}
+          onUpdateParticipant={onUpdateParticipant}
+          open={editOpen}
+          onOpenChange={setEditOpen}
+        />
+      )}
+    </>
   );
 }

@@ -27,9 +27,13 @@ const Index = () => {
     isLoading,
     error,
     createMeeting,
+    updateMeeting,
     deleteMeeting,
     startMeeting,
     completeMeeting,
+    addParticipant,
+    removeParticipant,
+    updateParticipant,
   } = useMeetings();
 
   const [recordingMeetingId, setRecordingMeetingId] = React.useState<string | null>(null);
@@ -171,9 +175,14 @@ const Index = () => {
                     <MeetingCard
                       key={meeting.id}
                       meeting={meeting}
+                      meetingTypes={meetingTypes}
                       onStart={handleStartMeeting}
                       onComplete={completeMeeting}
                       onDelete={deleteMeeting}
+                      onUpdateMeeting={updateMeeting}
+                      onAddParticipant={addParticipant}
+                      onRemoveParticipant={removeParticipant}
+                      onUpdateParticipant={updateParticipant}
                     />
                   ))}
                 </div>
@@ -189,8 +198,13 @@ const Index = () => {
                     <MeetingCard
                       key={meeting.id}
                       meeting={meeting}
+                      meetingTypes={meetingTypes}
                       onStart={handleStartMeeting}
                       onDelete={deleteMeeting}
+                      onUpdateMeeting={updateMeeting}
+                      onAddParticipant={addParticipant}
+                      onRemoveParticipant={removeParticipant}
+                      onUpdateParticipant={updateParticipant}
                     />
                   ))}
                 </div>
@@ -221,8 +235,13 @@ const Index = () => {
                     <MeetingCard
                       key={meeting.id}
                       meeting={meeting}
+                      meetingTypes={meetingTypes}
                       onStart={handleStartMeeting}
                       onDelete={deleteMeeting}
+                      onUpdateMeeting={updateMeeting}
+                      onAddParticipant={addParticipant}
+                      onRemoveParticipant={removeParticipant}
+                      onUpdateParticipant={updateParticipant}
                     />
                   ))}
                 </div>
@@ -235,7 +254,12 @@ const Index = () => {
                   <MeetingCard
                     key={meeting.id}
                     meeting={meeting}
+                    meetingTypes={meetingTypes}
                     onDelete={deleteMeeting}
+                    onUpdateMeeting={updateMeeting}
+                    onAddParticipant={addParticipant}
+                    onRemoveParticipant={removeParticipant}
+                    onUpdateParticipant={updateParticipant}
                   />
                 ))
               ) : (
