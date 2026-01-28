@@ -4,7 +4,14 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Users, Mail, User, Pencil, Check, X } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { Users, Mail, User, Pencil, Check, X, ChevronDown, Send } from "lucide-react";
 import { toast } from "sonner";
 import type { Participant } from "@/hooks/useMeetings";
 
@@ -12,6 +19,7 @@ interface ParticipantsPanelProps {
   participants: Participant[];
   speakerStats?: Record<string, { segments: number; durationMs: number }>;
   onUpdateParticipant?: (participantId: string, updates: { email?: string | null }) => Promise<void>;
+  meetingTitle?: string;
 }
 
 function getInitials(name: string): string {
@@ -36,10 +44,53 @@ const STATUS_STYLES: Record<string, string> = {
   tentative: "border-muted-foreground bg-muted",
 };
 
-export function ParticipantsPanel({ participants, speakerStats, onUpdateParticipant }: ParticipantsPanelProps) {
+export function ParticipantsPanel({ participants, speakerStats, onUpdateParticipant, meetingTitle }: ParticipantsPanelProps) {
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [editEmail, setEditEmail] = React.useState("");
   const [isSaving, setIsSaving] = React.useState(false);
+  const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
+  const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
+
+  const participantsWithEmail = React.useMemo(
+    () => participants.filter((p) => p.email),
+    [participants]
+  );
+
+  const toggleParticipant = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    setSelectedIds(new Set(participantsWithEmail.map((p) => p.id)));
+  };
+
+  const clearSelection = () => {
+    setSelectedIds(new Set());
+  };
+
+  const handleSendEmail = () => {
+    const selectedParticipants = participantsWithEmail.filter((p) => selectedIds.has(p.id));
+    if (selectedParticipants.length === 0) {
+      toast.error("No participants selected");
+      return;
+    }
+
+    const emails = selectedParticipants.map((p) => p.email).join(",");
+    const subject = encodeURIComponent(meetingTitle ? `Follow-up: ${meetingTitle}` : "Meeting Follow-up");
+    const body = encodeURIComponent(`Hi ${selectedParticipants.map((p) => p.name.split(" ")[0]).join(", ")},\n\nFollowing up on our meeting.\n\nBest regards`);
+    
+    window.open(`mailto:${emails}?subject=${subject}&body=${body}`, "_blank");
+    setIsDropdownOpen(false);
+    toast.success(`Opening email to ${selectedParticipants.length} recipient(s)`);
+  };
 
   const handleEditClick = (participant: Participant) => {
     setEditingId(participant.id);
@@ -88,16 +139,86 @@ export function ParticipantsPanel({ participants, speakerStats, onUpdateParticip
     );
   }
 
-  const participantsWithEmail = participants.filter((p) => p.email);
   const participantsWithoutEmail = participants.filter((p) => !p.email);
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Users className="h-5 w-5" />
-          Participants
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Participants
+          </CardTitle>
+          
+          {participantsWithEmail.length > 0 && (
+            <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-1.5">
+                  <Mail className="h-4 w-4" />
+                  Email
+                  <ChevronDown className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64 bg-popover">
+                <div className="p-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium">Select recipients</span>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2 text-xs"
+                        onClick={selectAll}
+                      >
+                        All
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2 text-xs"
+                        onClick={clearSelection}
+                      >
+                        Clear
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-1 max-h-48 overflow-y-auto">
+                    {participantsWithEmail.map((p) => (
+                      <label
+                        key={p.id}
+                        className="flex items-center gap-2 p-2 rounded-md hover:bg-accent cursor-pointer"
+                      >
+                        <Checkbox
+                          checked={selectedIds.has(p.id)}
+                          onCheckedChange={() => toggleParticipant(p.id)}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium truncate">{p.name}</div>
+                          <div className="text-xs text-muted-foreground truncate">{p.email}</div>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                
+                <DropdownMenuSeparator />
+                
+                <div className="p-2">
+                  <Button
+                    size="sm"
+                    className="w-full gap-1.5"
+                    onClick={handleSendEmail}
+                    disabled={selectedIds.size === 0}
+                  >
+                    <Send className="h-3.5 w-3.5" />
+                    Send to {selectedIds.size} recipient{selectedIds.size !== 1 ? "s" : ""}
+                  </Button>
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
         <CardDescription>
           {participants.length} participant{participants.length > 1 ? "s" : ""} • 
           {participantsWithEmail.length} with email
