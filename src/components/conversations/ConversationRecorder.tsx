@@ -56,7 +56,12 @@ function readAudioDurationMs(file: Blob): Promise<number> {
   });
 }
 
-export function ConversationRecorder() {
+interface ConversationRecorderProps {
+  meetingId?: string;
+  onComplete?: (conversationId: string) => void;
+}
+
+export function ConversationRecorder({ meetingId, onComplete }: ConversationRecorderProps = {}) {
   const navigate = useNavigate();
   const inputRef = React.useRef<HTMLInputElement | null>(null);
   const { uploadAndTranscribe } = useConversationBackend();
@@ -194,14 +199,21 @@ export function ConversationRecorder() {
         mimeType: record.mimeType,
         sizeBytes: record.sizeBytes,
       });
+
+      setSaveProgress(100);
+      
+      // If we have a meeting context, call onComplete to link the conversation
+      if (onComplete) {
+        onComplete(conversationId);
+      }
+      
       navigate(`/c/${conversationId}`);
       
-      setSaveProgress(100);
       handleReset();
       setIsSaving(false);
       setSaveProgress(0);
     },
-    [durationMs, mimeType, uploadAndTranscribe, navigate],
+    [durationMs, mimeType, uploadAndTranscribe, navigate, onComplete],
   );
 
   const handleSave = async () => {

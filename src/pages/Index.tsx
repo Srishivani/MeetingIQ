@@ -45,6 +45,14 @@ const Index = () => {
     void startMeeting(meetingId);
   };
 
+  const handleRecordingComplete = async (conversationId: string) => {
+    if (recordingMeetingId) {
+      await completeMeeting(recordingMeetingId, conversationId);
+      setShowRecorder(false);
+      setRecordingMeetingId(null);
+    }
+  };
+
   const upcomingCount = grouped.upcoming.length + grouped.inProgress.length;
   const completedCount = grouped.completed.length;
 
@@ -284,7 +292,10 @@ const Index = () => {
               Record your meeting audio. When finished, it will be transcribed and analyzed.
             </DialogDescription>
           </DialogHeader>
-          <ConversationRecorder />
+          <ConversationRecorder 
+            meetingId={recordingMeetingId ?? undefined} 
+            onComplete={handleRecordingComplete}
+          />
         </DialogContent>
       </Dialog>
 
