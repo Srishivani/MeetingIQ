@@ -160,6 +160,16 @@ export function MeetingCard({
             </Badge>
 
             <div className="flex items-center gap-1">
+              {/* View Recording/Intelligence - always show if conversationId exists */}
+              {meeting.conversationId && (
+                <Button asChild size="sm" variant={meeting.status === "completed" ? "default" : "secondary"} className="gap-1.5">
+                  <Link to={`/c/${meeting.conversationId}`}>
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    View
+                  </Link>
+                </Button>
+              )}
+
               {/* Start Recording */}
               {isUpcoming && onStart && (
                 <Button size="sm" className="gap-1" onClick={() => onStart(meeting.id)}>
@@ -171,14 +181,7 @@ export function MeetingCard({
               {/* In Progress Actions */}
               {meeting.status === "in-progress" && (
                 <>
-                  {meeting.conversationId ? (
-                    <Button asChild size="sm" variant="default">
-                      <Link to={`/c/${meeting.conversationId}`}>
-                        <ExternalLink className="mr-1 h-3.5 w-3.5" />
-                        View
-                      </Link>
-                    </Button>
-                  ) : onStart && (
+                  {!meeting.conversationId && onStart && (
                     <Button size="sm" className="gap-1" onClick={() => onStart(meeting.id)}>
                       <Play className="h-3.5 w-3.5" />
                       Record
@@ -190,16 +193,6 @@ export function MeetingCard({
                     </Button>
                   )}
                 </>
-              )}
-
-              {/* Completed: View Notes & Intelligence */}
-              {meeting.status === "completed" && meeting.conversationId && (
-                <Button asChild size="sm" variant="default" className="gap-1.5">
-                  <Link to={`/c/${meeting.conversationId}`}>
-                    <ExternalLink className="h-3.5 w-3.5" />
-                    View Intelligence
-                  </Link>
-                </Button>
               )}
 
               {/* Menu */}
