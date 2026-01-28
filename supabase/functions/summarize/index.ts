@@ -49,7 +49,6 @@ serve(async (req) => {
     }
 
     if (!chunks || chunks.length === 0) {
-      // Not an error: transcription may still be running.
       return new Response(
         JSON.stringify({ success: false, error: "No transcript found yet" }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -80,33 +79,35 @@ Be concise. Return valid JSON only.`;
       )
       .join("\n")}`;
 
-    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
-
-    const claudeResponse = await fetch("https://api.anthropic.com/v1/messages", {
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    
+    console.log("[summarize] Calling Lovable AI Gateway...");
+    
+    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
-        "x-api-key": ANTHROPIC_API_KEY || "",
-        "anthropic-version": "2023-06-01",
+        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-3-5-sonnet-20241022",
-        max_tokens: 2048,
+        model: "google/gemini-3-flash-preview",
         messages: [
-          { role: "user", content: `${systemPrompt}\n\n${userPrompt}` },
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
         ],
+        max_tokens: 2048,
       }),
     });
 
-    if (!claudeResponse.ok) {
-      const errorText = await claudeResponse.text();
-      console.error("[summarize] Claude error:", claudeResponse.status, errorText);
-      throw new Error(`Claude API error: ${claudeResponse.status}`);
+    if (!aiResponse.ok) {
+      const errorText = await aiResponse.text();
+      console.error("[summarize] AI Gateway error:", aiResponse.status, errorText);
+      throw new Error(`AI Gateway error: ${aiResponse.status}`);
     }
 
-    const claudeData = await claudeResponse.json();
-    const rawText = claudeData.content[0].text;
-    console.log("[summarize] Claude raw response:", rawText);
+    const aiData = await aiResponse.json();
+    const rawText = aiData.choices?.[0]?.message?.content || "";
+    console.log("[summarize] AI raw response:", rawText.slice(0, 500));
 
     // Extract JSON from markdown code blocks if present
     let summaryJson = rawText;
