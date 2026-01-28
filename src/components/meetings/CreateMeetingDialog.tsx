@@ -10,14 +10,36 @@ import { Plus, X, Calendar, Clock, MapPin, Users, Video, Building, UserPlus, Mai
 import type { MeetingType, CreateMeetingInput, AgendaItem } from "@/hooks/useMeetings";
 import { buildMailtoLink, openMailtoLink } from "@/lib/meetingInvite";
 
+interface InitialMeetingValues {
+  title?: string;
+  description?: string;
+  agenda?: string[];
+  participants?: Array<{ name: string; email?: string }>;
+}
+
 interface CreateMeetingDialogProps {
   meetingTypes: MeetingType[];
   onCreateMeeting: (input: CreateMeetingInput) => Promise<string | null>;
   trigger?: React.ReactNode;
+  initialValues?: InitialMeetingValues;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function CreateMeetingDialog({ meetingTypes, onCreateMeeting, trigger }: CreateMeetingDialogProps) {
-  const [open, setOpen] = React.useState(false);
+export function CreateMeetingDialog({ 
+  meetingTypes, 
+  onCreateMeeting, 
+  trigger,
+  initialValues,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
+}: CreateMeetingDialogProps) {
+  const [internalOpen, setInternalOpen] = React.useState(false);
+  
+  // Support both controlled and uncontrolled modes
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = isControlled ? (controlledOnOpenChange ?? (() => {})) : setInternalOpen;
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [createdMeeting, setCreatedMeeting] = React.useState<{
     title: string;
@@ -45,22 +67,33 @@ export function CreateMeetingDialog({ meetingTypes, onCreateMeeting, trigger }: 
   const [newParticipantName, setNewParticipantName] = React.useState("");
   const [newParticipantEmail, setNewParticipantEmail] = React.useState("");
 
-  const resetForm = () => {
-    setTitle("");
-    setDescription("");
+  const resetForm = React.useCallback(() => {
+    setTitle(initialValues?.title ?? "");
+    setDescription(initialValues?.description ?? "");
     setMeetingTypeId("");
     setDate("");
     setTime("");
     setDurationMinutes(30);
     setLocation("");
     setLocationType("in-person");
-    setAgenda([]);
+    setAgenda(
+      initialValues?.agenda?.map((item) => ({ id: crypto.randomUUID(), title: item })) ?? []
+    );
     setNewAgendaItem("");
-    setParticipants([]);
+    setParticipants(
+      initialValues?.participants?.map((p) => ({ name: p.name, email: p.email ?? "" })) ?? []
+    );
     setNewParticipantName("");
     setNewParticipantEmail("");
     setCreatedMeeting(null);
-  };
+  }, [initialValues]);
+
+  // Apply initial values when dialog opens or initialValues change
+  React.useEffect(() => {
+    if (open) {
+      resetForm();
+    }
+  }, [open, resetForm]);
 
   const handleClose = () => {
     resetForm();

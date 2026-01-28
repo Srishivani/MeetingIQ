@@ -6,9 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { supabaseDevice } from "@/integrations/supabase/clientDevice";
+import { CreateMeetingDialog } from "@/components/meetings/CreateMeetingDialog";
+import { useMeetings } from "@/hooks/useMeetings";
 import { 
   Mail, Calendar, Bell, Loader2, Copy, Check, 
-  Send, User, Clock, ListChecks, RefreshCw, ExternalLink
+  Send, User, Clock, ListChecks, RefreshCw, ExternalLink, Plus
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -37,11 +39,13 @@ interface FollowUpAutomationProps {
 }
 
 export function FollowUpAutomation({ conversationId, meetingTitle, participants }: FollowUpAutomationProps) {
+  const { meetingTypes, createMeeting } = useMeetings();
   const [data, setData] = React.useState<FollowUpData | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isRegenerating, setIsRegenerating] = React.useState(false);
   const [copiedEmail, setCopiedEmail] = React.useState(false);
   const [copiedAgenda, setCopiedAgenda] = React.useState(false);
+  const [showCreateMeeting, setShowCreateMeeting] = React.useState(false);
 
   const fetchFollowUpData = React.useCallback(async () => {
     try {
@@ -356,11 +360,28 @@ export function FollowUpAutomation({ conversationId, meetingTitle, participants 
                     <p className="text-xs text-muted-foreground">
                       {data.next_meeting_agenda.length} agenda items for next meeting
                     </p>
-                    <Button variant="secondary" size="sm" className="gap-1.5">
-                      <Calendar className="h-4 w-4" />
-                      Create Meeting
+                    <Button 
+                      variant="secondary" 
+                      size="sm" 
+                      className="gap-1.5"
+                      onClick={() => setShowCreateMeeting(true)}
+                    >
+                      <Plus className="h-4 w-4" />
+                      Create Follow-Up Meeting
                     </Button>
                   </div>
+
+                  <CreateMeetingDialog
+                    meetingTypes={meetingTypes}
+                    onCreateMeeting={createMeeting}
+                    open={showCreateMeeting}
+                    onOpenChange={setShowCreateMeeting}
+                    initialValues={{
+                      title: meetingTitle ? `Follow-up: ${meetingTitle}` : "Follow-up Meeting",
+                      agenda: data.next_meeting_agenda,
+                      participants: participants?.map((p) => ({ name: p.name, email: p.email ?? undefined })),
+                    }}
+                  />
                 </div>
               ) : (
                 <div className="rounded-lg border bg-muted/30 p-6 text-center">
