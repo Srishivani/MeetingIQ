@@ -192,11 +192,12 @@ export function MeetingCard({
                 </>
               )}
 
-              {/* Completed: View Notes */}
+              {/* Completed: View Notes & Intelligence */}
               {meeting.status === "completed" && meeting.conversationId && (
-                <Button asChild size="sm" variant="secondary">
+                <Button asChild size="sm" variant="default" className="gap-1.5">
                   <Link to={`/c/${meeting.conversationId}`}>
-                    View Notes
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    View Intelligence
                   </Link>
                 </Button>
               )}
