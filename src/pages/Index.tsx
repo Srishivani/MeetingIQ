@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Brain, Calendar, Clock, Plus, Loader2, CalendarDays, History, Radio } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useMeetings } from "@/hooks/useMeetings";
 import { CreateMeetingDialog } from "@/components/meetings/CreateMeetingDialog";
 import { MeetingCard } from "@/components/meetings/MeetingCard";
@@ -63,16 +64,24 @@ const Index = () => {
               </p>
             </div>
 
-            <CreateMeetingDialog 
-              meetingTypes={meetingTypes} 
-              onCreateMeeting={createMeeting}
-              trigger={
-                <Button size="lg" className="gap-2">
-                  <Plus className="h-5 w-5" />
-                  Schedule Meeting
-                </Button>
-              }
-            />
+            <div className="flex items-center gap-3">
+              <CreateMeetingDialog 
+                meetingTypes={meetingTypes} 
+                onCreateMeeting={createMeeting}
+                trigger={
+                  <Button size="lg" className="gap-2">
+                    <Plus className="h-5 w-5" />
+                    Schedule Meeting
+                  </Button>
+                }
+              />
+              <Button asChild variant="outline" size="lg">
+                <Link to="/calendar">
+                  <CalendarDays className="mr-2 h-5 w-5" />
+                  Calendar
+                </Link>
+              </Button>
+            </div>
           </div>
 
           {/* Quick Stats */}
