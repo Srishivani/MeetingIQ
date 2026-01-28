@@ -18,7 +18,7 @@ import {
 import { useMediaRecorder } from "@/hooks/useMediaRecorder";
 import { useConversationBackend } from "@/hooks/useConversationBackend";
 import { useRealtimeTranscription, type TranscriptSegment } from "@/hooks/useRealtimeTranscription";
-import { type DetectedPhrase } from "@/lib/phraseDetection";
+import { type DetectedPhrase, type MeetingItemType } from "@/lib/phraseDetection";
 import { LiveMeetingPanel } from "@/components/conversations/LiveMeetingPanel";
 import { formatDuration } from "@/lib/conversations";
 import { 
@@ -62,7 +62,7 @@ export function InstantRecorder() {
   // Live items detected during recording
   const [liveItems, setLiveItems] = React.useState<Array<{
     id: string;
-    type: "deferred" | "action_item" | "decision" | "question";
+    type: MeetingItemType;
     content: string;
     triggerPhrase: string;
     timestampMs: number;
@@ -118,6 +118,8 @@ export function InstantRecorder() {
     action_item: liveMeetingItems.filter((i) => i.type === "action_item"),
     decision: liveMeetingItems.filter((i) => i.type === "decision"),
     question: liveMeetingItems.filter((i) => i.type === "question"),
+    risk: liveMeetingItems.filter((i) => i.type === "risk"),
+    followup: liveMeetingItems.filter((i) => i.type === "followup"),
   }), [liveMeetingItems]);
 
   // Start both recording and transcription

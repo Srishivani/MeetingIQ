@@ -196,9 +196,13 @@ export function useMeetingItems(conversationId: string | null) {
       action_item: [],
       decision: [],
       question: [],
+      risk: [],
+      followup: [],
     };
     for (const item of items) {
-      groups[item.type].push(item);
+      if (groups[item.type]) {
+        groups[item.type].push(item);
+      }
     }
     return groups;
   }, [items]);

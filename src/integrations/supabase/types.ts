@@ -57,10 +57,14 @@ export type Database = {
           conversation_id: string
           created_at: string
           device_key: string
+          due_date: string | null
           id: string
           is_ai_enhanced: boolean
           item_type: string
           owner: string | null
+          priority: string | null
+          raw_phrase: string | null
+          status: string | null
           timestamp_ms: number
           trigger_phrase: string | null
         }
@@ -70,10 +74,14 @@ export type Database = {
           conversation_id: string
           created_at?: string
           device_key: string
+          due_date?: string | null
           id?: string
           is_ai_enhanced?: boolean
           item_type: string
           owner?: string | null
+          priority?: string | null
+          raw_phrase?: string | null
+          status?: string | null
           timestamp_ms?: number
           trigger_phrase?: string | null
         }
@@ -83,10 +91,14 @@ export type Database = {
           conversation_id?: string
           created_at?: string
           device_key?: string
+          due_date?: string | null
           id?: string
           is_ai_enhanced?: boolean
           item_type?: string
           owner?: string | null
+          priority?: string | null
+          raw_phrase?: string | null
+          status?: string | null
           timestamp_ms?: number
           trigger_phrase?: string | null
         }

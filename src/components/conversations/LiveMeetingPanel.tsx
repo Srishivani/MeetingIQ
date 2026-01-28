@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Clock, CheckSquare, Gavel, HelpCircle, X, Sparkles, Radio } from "lucide-react";
+import { Clock, CheckSquare, Gavel, HelpCircle, X, Sparkles, Radio, AlertTriangle, RefreshCw } from "lucide-react";
 import { formatDuration } from "@/lib/conversations";
 import { getItemTypeLabel, type MeetingItemType } from "@/lib/phraseDetection";
 import type { MeetingItem } from "@/hooks/useMeetingItems";
@@ -20,6 +20,8 @@ const ICONS: Record<MeetingItemType, React.ReactNode> = {
   action_item: <CheckSquare className="h-3.5 w-3.5" />,
   decision: <Gavel className="h-3.5 w-3.5" />,
   question: <HelpCircle className="h-3.5 w-3.5" />,
+  risk: <AlertTriangle className="h-3.5 w-3.5" />,
+  followup: <RefreshCw className="h-3.5 w-3.5" />,
 };
 
 const TYPE_STYLES: Record<MeetingItemType, string> = {
@@ -27,6 +29,8 @@ const TYPE_STYLES: Record<MeetingItemType, string> = {
   decision: "border-green-500/30 bg-green-500/5",
   question: "border-purple-500/30 bg-purple-500/5",
   deferred: "border-amber-500/30 bg-amber-500/5",
+  risk: "border-red-500/30 bg-red-500/5",
+  followup: "border-cyan-500/30 bg-cyan-500/5",
 };
 
 const BADGE_STYLES: Record<MeetingItemType, string> = {
@@ -34,6 +38,8 @@ const BADGE_STYLES: Record<MeetingItemType, string> = {
   decision: "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20",
   question: "bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/20",
   deferred: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
+  risk: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
+  followup: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-500/20",
 };
 
 function ItemCard({ item, onRemove }: { item: MeetingItem; onRemove?: (id: string) => void }) {

@@ -12,7 +12,8 @@ import { formatDuration } from "@/lib/conversations";
 import { getItemTypeLabel, type MeetingItemType } from "@/lib/phraseDetection";
 import { 
   Brain, MessageSquare, Loader2, Send, CheckSquare, 
-  Gavel, HelpCircle, Clock, Sparkles, Quote, Lightbulb
+  Gavel, HelpCircle, Clock, Sparkles, Quote, Lightbulb,
+  AlertTriangle, RefreshCw
 } from "lucide-react";
 
 const ITEM_ICONS: Record<MeetingItemType, React.ReactNode> = {
@@ -20,6 +21,8 @@ const ITEM_ICONS: Record<MeetingItemType, React.ReactNode> = {
   decision: <Gavel className="h-4 w-4" />,
   question: <HelpCircle className="h-4 w-4" />,
   deferred: <Clock className="h-4 w-4" />,
+  risk: <AlertTriangle className="h-4 w-4" />,
+  followup: <RefreshCw className="h-4 w-4" />,
 };
 
 const ITEM_STYLES: Record<MeetingItemType, string> = {
@@ -27,6 +30,8 @@ const ITEM_STYLES: Record<MeetingItemType, string> = {
   decision: "border-green-500/30 bg-green-500/5",
   question: "border-purple-500/30 bg-purple-500/5",
   deferred: "border-amber-500/30 bg-amber-500/5",
+  risk: "border-red-500/30 bg-red-500/5",
+  followup: "border-cyan-500/30 bg-cyan-500/5",
 };
 
 const BADGE_STYLES: Record<MeetingItemType, string> = {
@@ -34,6 +39,8 @@ const BADGE_STYLES: Record<MeetingItemType, string> = {
   decision: "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20",
   question: "bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/20",
   deferred: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
+  risk: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
+  followup: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-500/20",
 };
 
 export function ConversationIntelligence({ conversationId }: { conversationId: string }) {
@@ -210,6 +217,22 @@ export function ConversationIntelligence({ conversationId }: { conversationId: s
                     <ItemSection 
                       type="deferred" 
                       items={grouped.deferred} 
+                    />
+                  )}
+
+                  {/* Risks */}
+                  {grouped.risk.length > 0 && (
+                    <ItemSection 
+                      type="risk" 
+                      items={grouped.risk} 
+                    />
+                  )}
+
+                  {/* Follow-ups */}
+                  {grouped.followup.length > 0 && (
+                    <ItemSection 
+                      type="followup" 
+                      items={grouped.followup} 
                     />
                   )}
                 </div>
