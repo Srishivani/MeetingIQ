@@ -6,6 +6,7 @@ type ElevenLabsWord = {
   start: number;
   end: number;
   type?: string;
+  speaker?: string;
 };
 
 const corsHeaders = {
@@ -55,7 +56,7 @@ serve(async (req) => {
     transcribeFormData.append("file", audioFile);
     transcribeFormData.append("model_id", "scribe_v2");
     transcribeFormData.append("tag_audio_events", "false");
-    transcribeFormData.append("diarize", "false");
+    transcribeFormData.append("diarize", "true");
     // Ensure word-level timestamps are included
     transcribeFormData.append("timestamps_granularity", "word");
 
@@ -83,22 +84,40 @@ serve(async (req) => {
     const rawWords: ElevenLabsWord[] = Array.isArray(transcription.words) ? (transcription.words as ElevenLabsWord[]) : [];
     // Some responses include spacing tokens; keep actual words only.
     const words = rawWords.filter((w) => (w.type ?? "word") === "word" && typeof w.text === "string");
-    const chunks: Array<{ text: string; start_ms: number; end_ms: number }> = [];
+    const chunks: Array<{ text: string; start_ms: number; end_ms: number; speaker: string | null }> = [];
     let buffer: typeof words = [];
     let bufferStartMs = 0;
+    let currentSpeaker: string | null = null;
 
     for (let i = 0; i < words.length; i++) {
       const w = words[i];
+      const wordSpeaker = w.speaker ?? null;
+      
       if (buffer.length === 0) {
         bufferStartMs = Math.round(w.start * 1000);
+        currentSpeaker = wordSpeaker;
       }
+      
+      // If speaker changes, commit current buffer and start new one
+      const speakerChanged = wordSpeaker !== currentSpeaker && buffer.length > 0;
+      
+      if (speakerChanged) {
+        const lastWord = buffer[buffer.length - 1];
+        const chunkText = buffer.map((ww) => ww.text).join(" ");
+        const endMs = Math.round(lastWord.end * 1000);
+        chunks.push({ text: chunkText, start_ms: bufferStartMs, end_ms: endMs, speaker: currentSpeaker });
+        buffer = [];
+        bufferStartMs = Math.round(w.start * 1000);
+        currentSpeaker = wordSpeaker;
+      }
+      
       buffer.push(w);
 
       const span = Math.round(w.end * 1000) - bufferStartMs;
       if (buffer.length >= 5 || span >= 10000 || i === words.length - 1) {
         const chunkText = buffer.map((ww: { text: string; start: number; end: number }) => ww.text).join(" ");
         const endMs = Math.round(w.end * 1000);
-        chunks.push({ text: chunkText, start_ms: bufferStartMs, end_ms: endMs });
+        chunks.push({ text: chunkText, start_ms: bufferStartMs, end_ms: endMs, speaker: currentSpeaker });
         buffer = [];
       }
     }
@@ -107,7 +126,7 @@ serve(async (req) => {
 
     // Fallback: if ElevenLabs didn't return word timestamps, store the full text as one chunk.
     if (chunks.length === 0 && typeof transcription?.text === "string" && transcription.text.trim()) {
-      chunks.push({ text: transcription.text.trim(), start_ms: 0, end_ms: 0 });
+      chunks.push({ text: transcription.text.trim(), start_ms: 0, end_ms: 0, speaker: null });
       console.log("[transcribe] Fallback to single chunk from transcription.text");
     }
 
@@ -117,6 +136,7 @@ serve(async (req) => {
         text: chunk.text,
         start_ms: chunk.start_ms,
         end_ms: chunk.end_ms,
+        speaker: chunk.speaker,
       });
 
       if (insertErr) {
