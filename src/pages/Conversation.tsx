@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useConversations } from "@/hooks/useConversations";
 import { formatDuration } from "@/lib/conversations";
 import { ConversationIntelligence } from "@/components/conversations/ConversationIntelligence";
+import { FollowUpAutomation } from "@/components/conversations/FollowUpAutomation";
 import { LiveTranscript } from "@/components/dashboard/LiveTranscript";
 import { MeetingTimeline } from "@/components/dashboard/MeetingTimeline";
 import { ExportPanel } from "@/components/dashboard/ExportPanel";
@@ -18,7 +19,7 @@ import { ParticipantsPanel } from "@/components/dashboard/ParticipantsPanel";
 import { 
   ArrowLeft, Brain, Calendar, Clock, Volume2, 
   CheckSquare, Gavel, HelpCircle, Loader2, FileText,
-  MessageSquare, Milestone, Users
+  MessageSquare, Milestone, Users, Send
 } from "lucide-react";
 
 const Conversation = () => {
@@ -294,10 +295,14 @@ const Conversation = () => {
           {/* Main Panel - Tabbed Interface */}
           <div className="lg:col-span-2">
             <Tabs defaultValue="intelligence" className="space-y-4">
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="intelligence" className="gap-1.5">
                   <Brain className="h-4 w-4" />
                   Intelligence
+                </TabsTrigger>
+                <TabsTrigger value="followup" className="gap-1.5">
+                  <Send className="h-4 w-4" />
+                  Follow-Up
                 </TabsTrigger>
                 <TabsTrigger value="transcript" className="gap-1.5">
                   <MessageSquare className="h-4 w-4" />
@@ -311,6 +316,10 @@ const Conversation = () => {
 
               <TabsContent value="intelligence">
                 {id ? <ConversationIntelligence conversationId={id} /> : null}
+              </TabsContent>
+
+              <TabsContent value="followup">
+                {id ? <FollowUpAutomation conversationId={id} /> : null}
               </TabsContent>
 
               <TabsContent value="transcript">
