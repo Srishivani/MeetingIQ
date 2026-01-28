@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, X, Calendar, Clock, MapPin, Users, Video, Building, UserPlus, Mail, CheckCircle2 } from "lucide-react";
 import type { MeetingType, CreateMeetingInput, AgendaItem } from "@/hooks/useMeetings";
 import { buildMailtoLink, openMailtoLink } from "@/lib/meetingInvite";
+import { AddToCalendarButtons } from "@/components/meetings/AddToCalendarButtons";
+import { buildCalendarEvent } from "@/lib/calendarIntegration";
 
 interface InitialMeetingValues {
   title?: string;
@@ -252,6 +254,27 @@ export function CreateMeetingDialog({
                   {createdMeeting.participants.filter((p) => !p.email).length} participant(s) have no email address.
                 </p>
               )}
+            </div>
+
+            <div className="mt-6 space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="flex items-center gap-1.5 text-sm font-medium">
+                  <Calendar className="h-4 w-4" />
+                  Add to Your Calendar
+                </Label>
+              </div>
+              <AddToCalendarButtons
+                event={buildCalendarEvent({
+                  title: createdMeeting.title,
+                  description: createdMeeting.description,
+                  location: createdMeeting.location,
+                  scheduledAt: createdMeeting.scheduledAt,
+                  durationMinutes: createdMeeting.durationMinutes,
+                  agenda: createdMeeting.agenda,
+                })}
+                variant="secondary"
+                className="w-full justify-center"
+              />
             </div>
 
             <DialogFooter className="mt-6">
