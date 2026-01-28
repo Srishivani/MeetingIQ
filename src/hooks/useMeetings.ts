@@ -250,12 +250,17 @@ export function useMeetings() {
     }
   }, [fetchMeetings]);
 
-  // Complete meeting
-  const completeMeeting = React.useCallback(async (id: string) => {
+  // Complete meeting (optionally link conversation)
+  const completeMeeting = React.useCallback(async (id: string, conversationId?: string) => {
     try {
+      const updateData: { status: string; conversation_id?: string } = { status: "completed" };
+      if (conversationId) {
+        updateData.conversation_id = conversationId;
+      }
+
       const { error: updateError } = await supabaseDevice
         .from("meetings")
-        .update({ status: "completed" })
+        .update(updateData)
         .eq("id", id);
 
       if (updateError) throw updateError;
