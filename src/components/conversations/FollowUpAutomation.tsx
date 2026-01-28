@@ -278,6 +278,35 @@ export function FollowUpAutomation({ conversationId, meetingTitle, participants 
         </CardHeader>
 
         <CardContent>
+          {/* Participants Panel */}
+          {participants && participants.length > 0 && (
+            <div className="mb-4 rounded-lg border bg-muted/20 p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Users className="h-4 w-4 text-primary" />
+                <span className="text-sm font-medium">Meeting Participants</span>
+                <Badge variant="secondary" className="ml-auto">
+                  {participantsWithEmail.length}/{participants.length} with email
+                </Badge>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {participants.map((p, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center gap-2 rounded-md border bg-background px-3 py-1.5 text-sm"
+                  >
+                    <User className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="font-medium">{p.name}</span>
+                    {p.email ? (
+                      <span className="text-xs text-muted-foreground">{p.email}</span>
+                    ) : (
+                      <span className="text-xs text-amber-600">No email</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {!hasContent ? (
             <div className="rounded-lg border bg-muted/30 p-8 text-center">
               <Send className="mx-auto h-12 w-12 text-muted-foreground/50" />
