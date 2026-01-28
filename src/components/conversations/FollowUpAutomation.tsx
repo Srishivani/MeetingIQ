@@ -588,17 +588,29 @@ export function FollowUpAutomation({ conversationId, meetingTitle, participants 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="email-to">To</Label>
-              <Input
-                id="email-to"
-                type="email"
-                placeholder="recipient@example.com"
-                value={emailRecipient}
-                onChange={(e) => setEmailRecipient(e.target.value)}
-              />
-              {!emailRecipient && emailDialogType === "individual" && (
-                <p className="text-xs text-amber-600">
-                  No email found for {selectedNudge?.recipient}. Enter their email address.
-                </p>
+              {emailRecipient ? (
+                <div className="flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-2 text-sm">
+                  <Mail className="h-4 w-4 text-muted-foreground" />
+                  <span className="flex-1 truncate">{emailRecipient}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {emailDialogType === "common" 
+                      ? `${emailRecipient.split(",").length} recipient${emailRecipient.split(",").length > 1 ? "s" : ""}`
+                      : "from meeting"}
+                  </span>
+                </div>
+              ) : (
+                <>
+                  <Input
+                    id="email-to"
+                    type="email"
+                    placeholder="recipient@example.com"
+                    value={emailRecipient}
+                    onChange={(e) => setEmailRecipient(e.target.value)}
+                  />
+                  <p className="text-xs text-amber-600">
+                    No email found for {selectedNudge?.recipient || "participants"}. Enter email address or add it in the Participants panel.
+                  </p>
+                </>
               )}
             </div>
 
