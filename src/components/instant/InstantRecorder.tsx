@@ -3,9 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Dialog,
   DialogContent,
@@ -16,75 +17,14 @@ import {
 } from "@/components/ui/dialog";
 import { useMediaRecorder } from "@/hooks/useMediaRecorder";
 import { useConversationBackend } from "@/hooks/useConversationBackend";
-import { useMeetingItems } from "@/hooks/useMeetingItems";
-import { detectPhrases } from "@/lib/phraseDetection";
+import { useRealtimeTranscription, type TranscriptSegment } from "@/hooks/useRealtimeTranscription";
+import { type DetectedPhrase } from "@/lib/phraseDetection";
 import { LiveMeetingPanel } from "@/components/conversations/LiveMeetingPanel";
 import { formatDuration } from "@/lib/conversations";
 import { 
-  Mic, Pause, Play, Square, Brain, Loader2, CheckSquare, 
-  Gavel, HelpCircle, Clock, Zap, Save, Trash2
+  Mic, Pause, Play, Square, Brain, Loader2, 
+  Zap, Save, Trash2, Waves
 } from "lucide-react";
-
-// Real-time speech recognition hook
-function useSpeechRecognition(
-  isRecording: boolean,
-  onTranscript: (text: string, timestampMs: number) => void
-) {
-  const recognitionRef = React.useRef<any>(null);
-  const startTimeRef = React.useRef<number>(0);
-
-  React.useEffect(() => {
-    if (!isRecording) {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-        recognitionRef.current = null;
-      }
-      return;
-    }
-
-    const SpeechRecognitionAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognitionAPI) return;
-
-    const recognition = new SpeechRecognitionAPI();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = "en-US";
-    startTimeRef.current = Date.now();
-
-    recognition.onresult = (event: any) => {
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        if (event.results[i].isFinal) {
-          const text = event.results[i][0].transcript.trim();
-          if (text) onTranscript(text, Date.now() - startTimeRef.current);
-        }
-      }
-    };
-
-    recognition.onerror = (event: any) => {
-      if (event.error === "no-speech" || event.error === "aborted") {
-        try { recognition.start(); } catch {}
-      }
-    };
-
-    recognition.onend = () => {
-      if (isRecording && recognitionRef.current) {
-        try { recognition.start(); } catch {}
-      }
-    };
-
-    try {
-      recognition.start();
-      recognitionRef.current = recognition;
-    } catch {}
-
-    return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-        recognitionRef.current = null;
-      }
-    };
-  }, [isRecording, onTranscript]);
-}
 
 function fileTitle() {
   const d = new Date();
@@ -111,7 +51,7 @@ async function readAudioDurationMs(file: Blob): Promise<number> {
 export function InstantRecorder() {
   const navigate = useNavigate();
   const { uploadAndTranscribe } = useConversationBackend();
-  const { state, error, durationMs, blob, mimeType, start, pause, resume, stop, reset } = useMediaRecorder();
+  const { state, error: recorderError, durationMs, blob, mimeType, start: startRecording, pause, resume, stop: stopRecording, reset: resetRecording } = useMediaRecorder();
   
   const [isSaving, setIsSaving] = React.useState(false);
   const [saveProgress, setSaveProgress] = React.useState(0);
@@ -119,6 +59,7 @@ export function InstantRecorder() {
   const [meetingTitle, setMeetingTitle] = React.useState("");
   const [pendingBlob, setPendingBlob] = React.useState<Blob | null>(null);
   
+  // Live items detected during recording
   const [liveItems, setLiveItems] = React.useState<Array<{
     id: string;
     type: "deferred" | "action_item" | "decision" | "question";
@@ -127,22 +68,34 @@ export function InstantRecorder() {
     timestampMs: number;
   }>>([]);
 
-  const isRecording = state === "recording";
-
-  const handleTranscript = React.useCallback((text: string, timestampMs: number) => {
-    const detected = detectPhrases(text, timestampMs);
-    for (const phrase of detected) {
-      setLiveItems((prev) => [...prev, {
-        id: crypto.randomUUID(),
-        type: phrase.type,
-        content: phrase.content,
-        triggerPhrase: phrase.triggerPhrase,
-        timestampMs: phrase.timestampMs,
-      }]);
-    }
+  // Handle phrase detection from transcription
+  const handlePhraseDetected = React.useCallback((phrase: DetectedPhrase) => {
+    setLiveItems((prev) => [...prev, {
+      id: crypto.randomUUID(),
+      type: phrase.type,
+      content: phrase.content,
+      triggerPhrase: phrase.triggerPhrase,
+      timestampMs: phrase.timestampMs,
+    }]);
   }, []);
 
-  useSpeechRecognition(isRecording, handleTranscript);
+  const {
+    isConnected: isTranscribing,
+    isConnecting,
+    transcripts,
+    partialText,
+    fullTranscript,
+    error: transcriptionError,
+    start: startTranscription,
+    stop: stopTranscription,
+    reset: resetTranscription,
+  } = useRealtimeTranscription({
+    onPhraseDetected: handlePhraseDetected,
+  });
+
+  const isRecording = state === "recording";
+  const isPaused = state === "paused";
+  const error = recorderError || transcriptionError;
 
   const liveMeetingItems = React.useMemo(() => 
     liveItems.map((item) => ({
@@ -166,6 +119,21 @@ export function InstantRecorder() {
     decision: liveMeetingItems.filter((i) => i.type === "decision"),
     question: liveMeetingItems.filter((i) => i.type === "question"),
   }), [liveMeetingItems]);
+
+  // Start both recording and transcription
+  const handleStart = async () => {
+    setLiveItems([]);
+    await Promise.all([
+      startRecording(),
+      startTranscription(),
+    ]);
+  };
+
+  // Stop both recording and transcription
+  const handleStop = () => {
+    stopRecording();
+    stopTranscription();
+  };
 
   // When recording stops, show naming dialog
   React.useEffect(() => {
@@ -202,7 +170,8 @@ export function InstantRecorder() {
     setPendingBlob(null);
     setMeetingTitle("");
     setLiveItems([]);
-    reset();
+    resetRecording();
+    resetTranscription();
   };
 
   const handleRemoveLiveItem = (itemId: string) => {
@@ -214,21 +183,31 @@ export function InstantRecorder() {
       {/* Main Recording Card */}
       <Card className="overflow-hidden border-2 border-dashed border-primary/30 bg-gradient-to-br from-primary/5 via-background to-background">
         <CardContent className="pt-8 pb-8">
-          {error && <div className="mb-4 text-sm text-destructive">{error}</div>}
+          {error && <div className="mb-4 text-sm text-destructive text-center">{error}</div>}
 
           {/* Idle State - Big Start Button */}
           {state === "idle" && !pendingBlob && !isSaving && (
             <div className="flex flex-col items-center text-center">
               <button
-                onClick={start}
-                className="group relative flex h-32 w-32 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-all hover:scale-105 hover:shadow-xl active:scale-95"
+                onClick={handleStart}
+                disabled={isConnecting}
+                className="group relative flex h-32 w-32 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-all hover:scale-105 hover:shadow-xl active:scale-95 disabled:opacity-50"
               >
-                <div className="absolute inset-0 rounded-full bg-primary animate-ping opacity-20 group-hover:opacity-30" />
-                <Mic className="h-12 w-12" />
+                {isConnecting ? (
+                  <Loader2 className="h-12 w-12 animate-spin" />
+                ) : (
+                  <>
+                    <div className="absolute inset-0 rounded-full bg-primary animate-ping opacity-20 group-hover:opacity-30" />
+                    <Mic className="h-12 w-12" />
+                  </>
+                )}
               </button>
               <h2 className="mt-6 text-2xl font-bold">Start Instant Meeting</h2>
               <p className="mt-2 max-w-md text-muted-foreground">
-                One-click recording for spontaneous meetings. Add title and details after you're done.
+                {isConnecting 
+                  ? "Setting up real-time transcription..." 
+                  : "One-click recording with live transcription. Add title and details after you're done."
+                }
               </p>
               <div className="mt-6 flex items-center gap-4 text-sm text-muted-foreground">
                 <span className="flex items-center gap-1">
@@ -237,26 +216,26 @@ export function InstantRecorder() {
                 </span>
                 <span className="flex items-center gap-1">
                   <Brain className="h-4 w-4 text-primary" />
-                  Auto transcription
+                  Live transcription
                 </span>
               </div>
             </div>
           )}
 
           {/* Recording State */}
-          {(state === "recording" || state === "paused") && (
+          {(isRecording || isPaused) && (
             <div className="flex flex-col items-center text-center">
               <div className="relative flex h-32 w-32 items-center justify-center">
-                {state === "recording" && (
+                {isRecording && (
                   <>
                     <span className="absolute inset-0 animate-ping rounded-full bg-destructive/30" />
                     <span className="absolute inset-4 animate-pulse rounded-full bg-destructive/20" />
                   </>
                 )}
                 <div className={`relative flex h-20 w-20 items-center justify-center rounded-full ${
-                  state === "recording" ? "bg-destructive" : "bg-muted"
+                  isRecording ? "bg-destructive" : "bg-muted"
                 }`}>
-                  {state === "recording" ? (
+                  {isRecording ? (
                     <div className="h-6 w-6 rounded-sm bg-white" />
                   ) : (
                     <Pause className="h-8 w-8 text-muted-foreground" />
@@ -267,12 +246,20 @@ export function InstantRecorder() {
               <div className="mt-4 text-4xl font-mono font-bold text-foreground">
                 {formatDuration(durationMs)}
               </div>
-              <Badge variant={state === "recording" ? "destructive" : "secondary"} className="mt-2">
-                {state === "recording" ? "Recording" : "Paused"}
-              </Badge>
+              <div className="mt-2 flex items-center gap-2">
+                <Badge variant={isRecording ? "destructive" : "secondary"}>
+                  {isRecording ? "Recording" : "Paused"}
+                </Badge>
+                {isTranscribing && (
+                  <Badge variant="outline" className="gap-1">
+                    <Waves className="h-3 w-3" />
+                    Transcribing
+                  </Badge>
+                )}
+              </div>
 
               <div className="mt-6 flex items-center gap-3">
-                {state === "recording" ? (
+                {isRecording ? (
                   <Button variant="outline" size="lg" onClick={pause} className="gap-2">
                     <Pause className="h-4 w-4" />
                     Pause
@@ -283,7 +270,7 @@ export function InstantRecorder() {
                     Resume
                   </Button>
                 )}
-                <Button size="lg" onClick={stop} className="gap-2">
+                <Button size="lg" onClick={handleStop} className="gap-2">
                   <Square className="h-4 w-4" />
                   Stop & Save
                 </Button>
@@ -299,16 +286,52 @@ export function InstantRecorder() {
               <Progress value={saveProgress} className="mt-4 w-64 h-2" />
               <p className="mt-2 text-sm text-muted-foreground">
                 {saveProgress < 50 ? "Uploading audio..." : 
-                 saveProgress < 80 ? "Transcribing..." : 
-                 "Generating summary..."}
+                 saveProgress < 80 ? "Finalizing transcription..." : 
+                 "Generating AI summary..."}
               </p>
             </div>
           )}
         </CardContent>
       </Card>
 
+      {/* Live Transcript Panel */}
+      {(isRecording || isPaused) && (
+        <Card>
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Waves className="h-4 w-4 text-primary" />
+              <span className="font-medium">Live Transcript</span>
+              {isTranscribing && (
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-500 opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
+                </span>
+              )}
+            </div>
+            <ScrollArea className="h-40 rounded-lg border bg-muted/30 p-3">
+              {transcripts.length === 0 && !partialText ? (
+                <p className="text-sm text-muted-foreground italic">
+                  Listening... speak to see real-time transcription
+                </p>
+              ) : (
+                <div className="space-y-1 text-sm">
+                  {transcripts.map((t) => (
+                    <span key={t.id} className="text-foreground">
+                      {t.text}{" "}
+                    </span>
+                  ))}
+                  {partialText && (
+                    <span className="text-muted-foreground italic">{partialText}</span>
+                  )}
+                </div>
+              )}
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Live Detection Panel */}
-      {(isRecording || state === "paused" || liveItems.length > 0) && !isSaving && (
+      {(isRecording || isPaused || liveItems.length > 0) && !isSaving && (
         <LiveMeetingPanel
           items={liveMeetingItems}
           grouped={liveGrouped}
@@ -337,6 +360,16 @@ export function InstantRecorder() {
                 placeholder="Enter meeting title..."
               />
             </div>
+
+            {transcripts.length > 0 && (
+              <div className="rounded-lg border bg-muted/50 p-3">
+                <div className="text-sm font-medium mb-2">Transcript Preview</div>
+                <p className="text-sm text-muted-foreground line-clamp-3">
+                  {fullTranscript.slice(0, 200)}
+                  {fullTranscript.length > 200 && "..."}
+                </p>
+              </div>
+            )}
 
             {liveItems.length > 0 && (
               <div className="rounded-lg border bg-muted/50 p-3">

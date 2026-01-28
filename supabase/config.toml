@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.ask]
 verify_jwt = false
+
+[functions.scribe-token]
+verify_jwt = false
