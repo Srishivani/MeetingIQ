@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Conversation from "./pages/Conversation";
 import CalendarView from "./pages/CalendarView";
+import QuickMeeting from "./pages/QuickMeeting";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -18,6 +19,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/quick" element={<QuickMeeting />} />
           <Route path="/calendar" element={<CalendarView />} />
           <Route path="/c/:id" element={<Conversation />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

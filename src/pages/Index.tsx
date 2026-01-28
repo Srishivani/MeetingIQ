@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Brain, Calendar, Clock, Plus, Loader2, CalendarDays, History, Radio } from "lucide-react";
+import { Brain, Calendar, Clock, Plus, Loader2, CalendarDays, History, Radio, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useMeetings } from "@/hooks/useMeetings";
 import { CreateMeetingDialog } from "@/components/meetings/CreateMeetingDialog";
@@ -64,7 +64,13 @@ const Index = () => {
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <Button asChild size="lg" variant="secondary" className="gap-2">
+                <Link to="/quick">
+                  <Zap className="h-5 w-5" />
+                  Quick Record
+                </Link>
+              </Button>
               <CreateMeetingDialog 
                 meetingTypes={meetingTypes} 
                 onCreateMeeting={createMeeting}
