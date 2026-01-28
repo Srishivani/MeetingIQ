@@ -2,12 +2,16 @@ import * as React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Users, Mail, User } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Users, Mail, User, Pencil, Check, X } from "lucide-react";
+import { toast } from "sonner";
 import type { Participant } from "@/hooks/useMeetings";
 
 interface ParticipantsPanelProps {
   participants: Participant[];
   speakerStats?: Record<string, { segments: number; durationMs: number }>;
+  onUpdateParticipant?: (participantId: string, updates: { email?: string | null }) => Promise<void>;
 }
 
 function getInitials(name: string): string {
@@ -32,7 +36,39 @@ const STATUS_STYLES: Record<string, string> = {
   tentative: "border-muted-foreground bg-muted",
 };
 
-export function ParticipantsPanel({ participants, speakerStats }: ParticipantsPanelProps) {
+export function ParticipantsPanel({ participants, speakerStats, onUpdateParticipant }: ParticipantsPanelProps) {
+  const [editingId, setEditingId] = React.useState<string | null>(null);
+  const [editEmail, setEditEmail] = React.useState("");
+  const [isSaving, setIsSaving] = React.useState(false);
+
+  const handleEditClick = (participant: Participant) => {
+    setEditingId(participant.id);
+    setEditEmail(participant.email || "");
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditEmail("");
+  };
+
+  const handleSaveEmail = async (participantId: string) => {
+    if (!onUpdateParticipant) return;
+    
+    setIsSaving(true);
+    try {
+      await onUpdateParticipant(participantId, { 
+        email: editEmail.trim() || null 
+      });
+      toast.success("Email updated");
+      setEditingId(null);
+      setEditEmail("");
+    } catch (err) {
+      toast.error("Failed to update email");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   if (participants.length === 0) {
     return (
       <Card>
@@ -52,6 +88,9 @@ export function ParticipantsPanel({ participants, speakerStats }: ParticipantsPa
     );
   }
 
+  const participantsWithEmail = participants.filter((p) => p.email);
+  const participantsWithoutEmail = participants.filter((p) => !p.email);
+
   return (
     <Card>
       <CardHeader>
@@ -60,20 +99,27 @@ export function ParticipantsPanel({ participants, speakerStats }: ParticipantsPa
           Participants
         </CardTitle>
         <CardDescription>
-          {participants.length} participant{participants.length > 1 ? "s" : ""} in this meeting
+          {participants.length} participant{participants.length > 1 ? "s" : ""} • 
+          {participantsWithEmail.length} with email
+          {participantsWithoutEmail.length > 0 && (
+            <span className="text-amber-600 ml-1">
+              ({participantsWithoutEmail.length} missing)
+            </span>
+          )}
         </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
           {participants.map((participant) => {
             const stats = speakerStats?.[participant.name];
+            const isEditing = editingId === participant.id;
             
             return (
               <div
                 key={participant.id}
                 className={`flex items-center gap-3 rounded-lg border p-3 ${STATUS_STYLES[participant.status] || ""}`}
               >
-                <Avatar className="h-10 w-10">
+                <Avatar className="h-10 w-10 shrink-0">
                   <AvatarFallback className="text-sm font-medium">
                     {getInitials(participant.name)}
                   </AvatarFallback>
@@ -87,10 +133,72 @@ export function ParticipantsPanel({ participants, speakerStats }: ParticipantsPa
                     </Badge>
                   </div>
                   
-                  {participant.email && (
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                  {isEditing ? (
+                    <div className="flex items-center gap-2 mt-1.5">
+                      <Input
+                        type="email"
+                        placeholder="email@example.com"
+                        value={editEmail}
+                        onChange={(e) => setEditEmail(e.target.value)}
+                        className="h-7 text-xs"
+                        disabled={isSaving}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            void handleSaveEmail(participant.id);
+                          } else if (e.key === "Escape") {
+                            handleCancelEdit();
+                          }
+                        }}
+                        autoFocus
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => handleSaveEmail(participant.id)}
+                        disabled={isSaving}
+                      >
+                        <Check className="h-3.5 w-3.5 text-green-600" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={handleCancelEdit}
+                        disabled={isSaving}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  ) : participant.email ? (
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5 group">
                       <Mail className="h-3 w-3" />
                       <span className="truncate">{participant.email}</span>
+                      {onUpdateParticipant && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => handleEditClick(participant)}
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
+                  ) : onUpdateParticipant ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-xs text-amber-600 hover:text-amber-700 mt-0.5 -ml-2"
+                      onClick={() => handleEditClick(participant)}
+                    >
+                      <Mail className="h-3 w-3 mr-1" />
+                      Add email
+                    </Button>
+                  ) : (
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground/50 mt-0.5">
+                      <Mail className="h-3 w-3" />
+                      <span>No email</span>
                     </div>
                   )}
 
@@ -103,7 +211,7 @@ export function ParticipantsPanel({ participants, speakerStats }: ParticipantsPa
 
                 <Badge 
                   variant="outline" 
-                  className={`capitalize text-xs ${
+                  className={`capitalize text-xs shrink-0 ${
                     participant.status === "accepted" ? "text-green-600 border-green-500" :
                     participant.status === "declined" ? "text-destructive border-destructive" :
                     "text-muted-foreground"

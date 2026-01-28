@@ -306,6 +306,28 @@ export function useMeetings() {
     }
   }, [fetchMeetings]);
 
+  // Update participant (e.g., add/change email)
+  const updateParticipant = React.useCallback(async (
+    participantId: string,
+    updates: { name?: string; email?: string | null; role?: "organizer" | "attendee" | "optional" }
+  ) => {
+    try {
+      const { error: updateError } = await supabaseDevice
+        .from("meeting_participants")
+        .update({
+          name: updates.name,
+          email: updates.email,
+          role: updates.role,
+        })
+        .eq("id", participantId);
+
+      if (updateError) throw updateError;
+      await fetchMeetings();
+    } catch (err) {
+      console.error("[useMeetings] Update participant failed:", err);
+    }
+  }, [fetchMeetings]);
+
   // Initial fetch
   React.useEffect(() => {
     void fetchMeetingTypes();
@@ -333,6 +355,7 @@ export function useMeetings() {
     completeMeeting,
     addParticipant,
     removeParticipant,
+    updateParticipant,
     refetch: fetchMeetings,
   };
 }

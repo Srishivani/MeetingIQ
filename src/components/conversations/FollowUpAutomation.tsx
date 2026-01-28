@@ -15,7 +15,7 @@ import { useMeetings } from "@/hooks/useMeetings";
 import { 
   Mail, Calendar, Bell, Loader2, Copy, Check, 
   Send, User, Clock, ListChecks, RefreshCw, ExternalLink, Plus,
-  Users, UserCheck
+  Users, UserCheck, Pencil
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -168,12 +168,32 @@ export function FollowUpAutomation({ conversationId, meetingTitle, participants 
   const handleSendIndividual = (nudge: TaskNudge) => {
     const recipientEmail = findParticipantEmail(nudge.recipient, participants) || "";
     
+    // If we have an email, auto-fill and open dialog for review
     setEmailDialogType("individual");
     setSelectedNudge(nudge);
     setEmailRecipient(recipientEmail);
     setEmailSubject(`Action Required: ${nudge.task.slice(0, 50)}${nudge.task.length > 50 ? "..." : ""}`);
     setEmailBody(buildTaskEmail(nudge, meetingTitle));
     setEmailDialogOpen(true);
+  };
+
+  // Quick send - directly opens email client if email exists
+  const handleQuickSend = (nudge: TaskNudge) => {
+    const recipientEmail = findParticipantEmail(nudge.recipient, participants);
+    
+    if (!recipientEmail) {
+      // No email found, open dialog to enter email
+      handleSendIndividual(nudge);
+      return;
+    }
+    
+    // Direct send via mailto
+    const subject = encodeURIComponent(`Action Required: ${nudge.task.slice(0, 50)}${nudge.task.length > 50 ? "..." : ""}`);
+    const body = encodeURIComponent(buildTaskEmail(nudge, meetingTitle));
+    const to = encodeURIComponent(recipientEmail);
+    
+    window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
+    toast.success(`Opening email client for ${nudge.recipient}...`);
   };
 
   // Send the email via mailto
@@ -364,18 +384,43 @@ export function FollowUpAutomation({ conversationId, meetingTitle, participants 
                                       navigator.clipboard.writeText(buildTaskEmail(nudge, meetingTitle));
                                       toast.success("Task email copied");
                                     }}
+                                    title="Copy email"
                                   >
                                     <Copy className="h-4 w-4" />
                                   </Button>
-                                  <Button
-                                    variant="default"
-                                    size="sm"
-                                    onClick={() => handleSendIndividual(nudge)}
-                                    className="gap-1"
-                                  >
-                                    <Mail className="h-4 w-4" />
-                                    Send
-                                  </Button>
+                                  {hasEmail ? (
+                                    <>
+                                      <Button
+                                        variant="default"
+                                        size="sm"
+                                        onClick={() => handleQuickSend(nudge)}
+                                        className="gap-1"
+                                        title="Send directly"
+                                      >
+                                        <Mail className="h-4 w-4" />
+                                        Send
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleSendIndividual(nudge)}
+                                        title="Edit before sending"
+                                      >
+                                        <Pencil className="h-4 w-4" />
+                                      </Button>
+                                    </>
+                                  ) : (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleSendIndividual(nudge)}
+                                      className="gap-1"
+                                      title="Add email and send"
+                                    >
+                                      <Mail className="h-4 w-4" />
+                                      Add Email
+                                    </Button>
+                                  )}
                                 </div>
                               </div>
                             </div>
