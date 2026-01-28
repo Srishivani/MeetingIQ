@@ -18,8 +18,8 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/quick" element={<QuickMeeting />} />
+          <Route path="/" element={<QuickMeeting />} />
+          <Route path="/dashboard" element={<Index />} />
           <Route path="/calendar" element={<CalendarView />} />
           <Route path="/c/:id" element={<Conversation />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
