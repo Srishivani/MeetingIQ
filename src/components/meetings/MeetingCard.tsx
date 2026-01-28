@@ -5,15 +5,17 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { 
   Calendar, Clock, MapPin, Users, Video, Building, 
-  Play, MoreHorizontal, Trash2, ExternalLink, CheckCircle2
+  Play, MoreHorizontal, Trash2, ExternalLink, CheckCircle2, Mail
 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { Meeting } from "@/hooks/useMeetings";
+import { buildMailtoLinkFromMeeting, buildBulkMailtoLink, openMailtoLink } from "@/lib/meetingInvite";
 
 interface MeetingCardProps {
   meeting: Meeting;
@@ -180,6 +182,34 @@ export function MeetingCard({ meeting, onStart, onDelete, onComplete }: MeetingC
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  {/* Send Invites */}
+                  {meeting.participants && meeting.participants.length > 0 && (
+                    <>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          const participantsWithEmail = meeting.participants!.filter((p) => p.email);
+                          if (participantsWithEmail.length > 0) {
+                            openMailtoLink(buildBulkMailtoLink(meeting, participantsWithEmail));
+                          }
+                        }}
+                        disabled={!meeting.participants.some((p) => p.email)}
+                      >
+                        <Mail className="mr-2 h-4 w-4" />
+                        Send Invites to All
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      {meeting.participants.filter((p) => p.email).map((participant) => (
+                        <DropdownMenuItem
+                          key={participant.id}
+                          onClick={() => openMailtoLink(buildMailtoLinkFromMeeting(meeting, participant.email!, participant.name))}
+                        >
+                          <Mail className="mr-2 h-4 w-4" />
+                          Invite {participant.name}
+                        </DropdownMenuItem>
+                      ))}
+                      {meeting.participants.some((p) => p.email) && <DropdownMenuSeparator />}
+                    </>
+                  )}
                   {meeting.conversationId && (
                     <DropdownMenuItem asChild>
                       <Link to={`/c/${meeting.conversationId}`}>

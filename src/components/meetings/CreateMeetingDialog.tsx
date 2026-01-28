@@ -6,8 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, X, Calendar, Clock, MapPin, Users, Video, Building, UserPlus } from "lucide-react";
+import { Plus, X, Calendar, Clock, MapPin, Users, Video, Building, UserPlus, Mail, CheckCircle2 } from "lucide-react";
 import type { MeetingType, CreateMeetingInput, AgendaItem } from "@/hooks/useMeetings";
+import { buildMailtoLink, openMailtoLink } from "@/lib/meetingInvite";
 
 interface CreateMeetingDialogProps {
   meetingTypes: MeetingType[];
@@ -18,6 +19,16 @@ interface CreateMeetingDialogProps {
 export function CreateMeetingDialog({ meetingTypes, onCreateMeeting, trigger }: CreateMeetingDialogProps) {
   const [open, setOpen] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [createdMeeting, setCreatedMeeting] = React.useState<{
+    title: string;
+    description?: string;
+    scheduledAt: Date;
+    durationMinutes: number;
+    location?: string;
+    locationType: "in-person" | "virtual" | "hybrid";
+    agenda: AgendaItem[];
+    participants: Array<{ name: string; email: string }>;
+  } | null>(null);
 
   // Form state
   const [title, setTitle] = React.useState("");
@@ -48,6 +59,12 @@ export function CreateMeetingDialog({ meetingTypes, onCreateMeeting, trigger }: 
     setParticipants([]);
     setNewParticipantName("");
     setNewParticipantEmail("");
+    setCreatedMeeting(null);
+  };
+
+  const handleClose = () => {
+    resetForm();
+    setOpen(false);
   };
 
   const handleAddAgendaItem = () => {
@@ -79,7 +96,7 @@ export function CreateMeetingDialog({ meetingTypes, onCreateMeeting, trigger }: 
     try {
       const scheduledAt = new Date(`${date}T${time}`);
       
-      await onCreateMeeting({
+      const result = await onCreateMeeting({
         title: title.trim(),
         description: description.trim() || undefined,
         meetingTypeId: meetingTypeId || undefined,
@@ -91,11 +108,49 @@ export function CreateMeetingDialog({ meetingTypes, onCreateMeeting, trigger }: 
         participants: participants.map((p) => ({ name: p.name, email: p.email || undefined })),
       });
 
-      resetForm();
-      setOpen(false);
+      if (result) {
+        // Store meeting data for invite flow
+        const participantsWithEmail = participants.filter((p) => p.email);
+        if (participantsWithEmail.length > 0) {
+          setCreatedMeeting({
+            title: title.trim(),
+            description: description.trim() || undefined,
+            scheduledAt,
+            durationMinutes,
+            location: location.trim() || undefined,
+            locationType,
+            agenda,
+            participants,
+          });
+        } else {
+          resetForm();
+          setOpen(false);
+        }
+      }
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleSendInvite = (email: string, name: string) => {
+    if (!createdMeeting) return;
+    openMailtoLink(buildMailtoLink({
+      ...createdMeeting,
+      recipientEmail: email,
+      recipientName: name,
+    }));
+  };
+
+  const handleSendAllInvites = () => {
+    if (!createdMeeting) return;
+    const emails = createdMeeting.participants
+      .filter((p) => p.email)
+      .map((p) => p.email)
+      .join(",");
+    openMailtoLink(buildMailtoLink({
+      ...createdMeeting,
+      recipientEmail: emails,
+    }));
   };
 
   const locationIcons = {
@@ -105,7 +160,10 @@ export function CreateMeetingDialog({ meetingTypes, onCreateMeeting, trigger }: 
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(isOpen) => {
+      if (!isOpen) handleClose();
+      else setOpen(true);
+    }}>
       <DialogTrigger asChild>
         {trigger || (
           <Button className="gap-2">
@@ -115,7 +173,63 @@ export function CreateMeetingDialog({ meetingTypes, onCreateMeeting, trigger }: 
         )}
       </DialogTrigger>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-        <form onSubmit={handleSubmit}>
+        {createdMeeting ? (
+          // Success state - Send Invites
+          <div className="py-4">
+            <div className="flex flex-col items-center text-center">
+              <div className="rounded-full bg-primary/10 p-3">
+                <CheckCircle2 className="h-8 w-8 text-primary" />
+              </div>
+              <h2 className="mt-4 text-lg font-semibold">Meeting Scheduled!</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                "{createdMeeting.title}" has been created successfully.
+              </p>
+            </div>
+
+            <div className="mt-6 space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="flex items-center gap-1.5 text-sm font-medium">
+                  <Mail className="h-4 w-4" />
+                  Send Invitations
+                </Label>
+                {createdMeeting.participants.filter((p) => p.email).length > 1 && (
+                  <Button size="sm" variant="outline" onClick={handleSendAllInvites}>
+                    Send to All
+                  </Button>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                {createdMeeting.participants.filter((p) => p.email).map((p, i) => (
+                  <div key={i} className="flex items-center justify-between rounded-lg border bg-muted/50 px-3 py-2">
+                    <div>
+                      <div className="text-sm font-medium">{p.name}</div>
+                      <div className="text-xs text-muted-foreground">{p.email}</div>
+                    </div>
+                    <Button size="sm" variant="secondary" onClick={() => handleSendInvite(p.email, p.name)}>
+                      <Mail className="mr-1.5 h-3.5 w-3.5" />
+                      Send
+                    </Button>
+                  </div>
+                ))}
+              </div>
+
+              {createdMeeting.participants.filter((p) => !p.email).length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {createdMeeting.participants.filter((p) => !p.email).length} participant(s) have no email address.
+                </p>
+              )}
+            </div>
+
+            <DialogFooter className="mt-6">
+              <Button onClick={handleClose} className="w-full">
+                Done
+              </Button>
+            </DialogFooter>
+          </div>
+        ) : (
+          // Form state
+          <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Schedule a Meeting</DialogTitle>
             <DialogDescription>
@@ -337,7 +451,7 @@ export function CreateMeetingDialog({ meetingTypes, onCreateMeeting, trigger }: 
           </div>
 
           <DialogFooter className="mt-6">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            <Button type="button" variant="outline" onClick={handleClose}>
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting || !title.trim() || !date || !time}>
@@ -345,6 +459,7 @@ export function CreateMeetingDialog({ meetingTypes, onCreateMeeting, trigger }: 
             </Button>
           </DialogFooter>
         </form>
+        )}
       </DialogContent>
     </Dialog>
   );
