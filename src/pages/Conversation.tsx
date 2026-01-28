@@ -25,7 +25,7 @@ import {
 const Conversation = () => {
   const { id } = useParams();
   const { get } = useConversations();
-  const { meetings } = useMeetings();
+  const { meetings, updateParticipant } = useMeetings();
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [title, setTitle] = React.useState<string>("");
@@ -288,7 +288,10 @@ const Conversation = () => {
 
             {/* Participants */}
             {linkedMeeting?.participants && linkedMeeting.participants.length > 0 && (
-              <ParticipantsPanel participants={linkedMeeting.participants} />
+              <ParticipantsPanel 
+                participants={linkedMeeting.participants} 
+                onUpdateParticipant={updateParticipant}
+              />
             )}
           </div>
 
