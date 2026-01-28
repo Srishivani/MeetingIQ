@@ -120,6 +120,9 @@ export function InstantRecorder() {
     question: liveMeetingItems.filter((i) => i.type === "question"),
     risk: liveMeetingItems.filter((i) => i.type === "risk"),
     followup: liveMeetingItems.filter((i) => i.type === "followup"),
+    commitment: liveMeetingItems.filter((i) => i.type === "commitment"),
+    concern: liveMeetingItems.filter((i) => i.type === "concern"),
+    ambiguity: liveMeetingItems.filter((i) => i.type === "ambiguity"),
   }), [liveMeetingItems]);
 
   // Start both recording and transcription

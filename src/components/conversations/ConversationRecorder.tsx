@@ -201,6 +201,9 @@ export function ConversationRecorder() {
     question: liveMeetingItems.filter((i) => i.type === "question"),
     risk: liveMeetingItems.filter((i) => i.type === "risk"),
     followup: liveMeetingItems.filter((i) => i.type === "followup"),
+    commitment: liveMeetingItems.filter((i) => i.type === "commitment"),
+    concern: liveMeetingItems.filter((i) => i.type === "concern"),
+    ambiguity: liveMeetingItems.filter((i) => i.type === "ambiguity"),
   }), [liveMeetingItems]);
 
   const handleRemoveLiveItem = (itemId: string) => {

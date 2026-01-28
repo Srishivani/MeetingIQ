@@ -187,6 +187,9 @@ export function useRealtimeEnhancement() {
       question: [],
       risk: [],
       followup: [],
+      commitment: [],
+      concern: [],
+      ambiguity: [],
     };
     
     for (const item of items.filter((i) => i.status !== "dismissed")) {
