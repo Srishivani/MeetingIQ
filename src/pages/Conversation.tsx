@@ -2,6 +2,7 @@ import * as React from "react";
 import { Link, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { useConversations } from "@/hooks/useConversations";
 import { formatDuration } from "@/lib/conversations";
 import { ConversationIntelligence } from "@/components/conversations/ConversationIntelligence";
@@ -9,6 +10,10 @@ import { MeetingMinutes } from "@/components/conversations/MeetingMinutes";
 import { supabaseDevice } from "@/integrations/supabase/clientDevice";
 import { getDeviceKey } from "@/lib/deviceKey";
 import { useMeetingItems } from "@/hooks/useMeetingItems";
+import { 
+  ArrowLeft, Brain, Calendar, Clock, Volume2, 
+  CheckSquare, Gavel, HelpCircle, Loader2 
+} from "lucide-react";
 
 const Conversation = () => {
   const { id } = useParams();
@@ -26,7 +31,7 @@ const Conversation = () => {
     open_questions?: string[];
   } | null>(null);
 
-  const { items, grouped, removeItem } = useMeetingItems(id ?? null);
+  const { items, grouped } = useMeetingItems(id ?? null);
 
   React.useEffect(() => {
     let revoked: string | null = null;
@@ -62,12 +67,12 @@ const Conversation = () => {
       }
 
       if (!conv) {
-        setError("Conversation not found.");
+        setError("Meeting not found.");
         setIsLoading(false);
         return;
       }
 
-      setTitle(conv.title ?? "Conversation");
+      setTitle(conv.title ?? "Meeting");
       setCreatedAt(new Date(conv.created_at).getTime());
       setDurationMs(conv.duration_ms ?? 0);
 
@@ -106,45 +111,128 @@ const Conversation = () => {
     };
   }, [get, id]);
 
+  // Count items by type
+  const itemCounts = {
+    action_items: grouped.action_item.length,
+    decisions: grouped.decision.length,
+    questions: grouped.question.length,
+    deferred: grouped.deferred.length,
+  };
+
   return (
     <main className="min-h-screen bg-background">
-      <header className="border-b bg-background">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-4">
-          <div className="min-w-0">
-            <div className="text-xs text-muted-foreground">ConvoIQ • Local prototype</div>
-            <h1 className="truncate text-lg font-semibold">{isLoading ? "Loading…" : title || "Conversation"}</h1>
-            {!isLoading && !error ? (
-              <div className="text-xs text-muted-foreground">
-                {new Date(createdAt).toLocaleString()} • {formatDuration(durationMs)}
+      {/* Header */}
+      <header className="border-b bg-card">
+        <div className="mx-auto w-full max-w-6xl px-4 py-6">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <Button asChild variant="ghost" size="sm" className="mb-3 -ml-2 text-muted-foreground">
+                <Link to="/">
+                  <ArrowLeft className="mr-1 h-4 w-4" />
+                  Back to Meetings
+                </Link>
+              </Button>
+              
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+                  <Brain className="h-6 w-6" />
+                </div>
+                <div>
+                  {isLoading ? (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading meeting…
+                    </div>
+                  ) : (
+                    <>
+                      <h1 className="text-2xl font-bold tracking-tight">{title || "Meeting"}</h1>
+                      <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="h-3.5 w-3.5" />
+                          {new Date(createdAt).toLocaleDateString(undefined, {
+                            weekday: 'long',
+                            month: 'long',
+                            day: 'numeric',
+                            year: 'numeric'
+                          })}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3.5 w-3.5" />
+                          {formatDuration(durationMs)}
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
-            ) : null}
+
+              {/* Item counts */}
+              {!isLoading && (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {itemCounts.action_items > 0 && (
+                    <Badge variant="secondary" className="gap-1">
+                      <CheckSquare className="h-3 w-3" />
+                      {itemCounts.action_items} Action Items
+                    </Badge>
+                  )}
+                  {itemCounts.decisions > 0 && (
+                    <Badge variant="secondary" className="gap-1">
+                      <Gavel className="h-3 w-3" />
+                      {itemCounts.decisions} Decisions
+                    </Badge>
+                  )}
+                  {itemCounts.questions > 0 && (
+                    <Badge variant="secondary" className="gap-1">
+                      <HelpCircle className="h-3 w-3" />
+                      {itemCounts.questions} Questions
+                    </Badge>
+                  )}
+                  {itemCounts.deferred > 0 && (
+                    <Badge variant="secondary" className="gap-1">
+                      <Clock className="h-3 w-3" />
+                      {itemCounts.deferred} Deferred
+                    </Badge>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
-          <Button asChild variant="outline">
-            <Link to="/">Back</Link>
-          </Button>
         </div>
       </header>
 
+      {/* Main Content */}
       <div className="mx-auto w-full max-w-6xl px-4 py-6">
-        {error ? <div className="text-sm text-destructive">{error}</div> : null}
+        {error ? (
+          <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
+            {error}
+          </div>
+        ) : null}
 
-        <div className="grid gap-4 lg:grid-cols-5">
-          <div className="lg:col-span-2">
+        <div className="grid gap-6 lg:grid-cols-5">
+          {/* Sidebar */}
+          <div className="space-y-4 lg:col-span-2">
+            {/* Audio Player */}
             <Card>
               <CardHeader>
-                <CardTitle>Audio</CardTitle>
-                <CardDescription>Playback is from your device (local) or your private backend storage.</CardDescription>
+                <div className="flex items-center gap-2">
+                  <Volume2 className="h-5 w-5 text-primary" />
+                  <CardTitle>Recording</CardTitle>
+                </div>
+                <CardDescription>Original meeting audio</CardDescription>
               </CardHeader>
               <CardContent>
-                {audioUrl ? <audio controls className="w-full" src={audioUrl} /> : null}
+                {audioUrl ? (
+                  <audio controls className="w-full" src={audioUrl} />
+                ) : (
+                  <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Loading audio…
+                  </div>
+                )}
               </CardContent>
             </Card>
-          </div>
 
-          <div className="lg:col-span-3 space-y-4">
-            {id ? <ConversationIntelligence conversationId={id} /> : null}
-            
-            {/* Meeting Minutes export */}
+            {/* Meeting Minutes Export */}
             {id && !isLoading && (
               <MeetingMinutes
                 title={title}
@@ -155,6 +243,11 @@ const Conversation = () => {
                 summary={summary}
               />
             )}
+          </div>
+
+          {/* Main Panel */}
+          <div className="lg:col-span-3">
+            {id ? <ConversationIntelligence conversationId={id} /> : null}
           </div>
         </div>
       </div>
