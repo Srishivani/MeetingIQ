@@ -50,6 +50,56 @@ export type Database = {
         }
         Relationships: []
       }
+      meeting_items: {
+        Row: {
+          content: string
+          context: string | null
+          conversation_id: string
+          created_at: string
+          device_key: string
+          id: string
+          is_ai_enhanced: boolean
+          item_type: string
+          owner: string | null
+          timestamp_ms: number
+          trigger_phrase: string | null
+        }
+        Insert: {
+          content: string
+          context?: string | null
+          conversation_id: string
+          created_at?: string
+          device_key: string
+          id?: string
+          is_ai_enhanced?: boolean
+          item_type: string
+          owner?: string | null
+          timestamp_ms?: number
+          trigger_phrase?: string | null
+        }
+        Update: {
+          content?: string
+          context?: string | null
+          conversation_id?: string
+          created_at?: string
+          device_key?: string
+          id?: string
+          is_ai_enhanced?: boolean
+          item_type?: string
+          owner?: string | null
+          timestamp_ms?: number
+          trigger_phrase?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_items_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       summaries: {
         Row: {
           action_items: string[] | null
