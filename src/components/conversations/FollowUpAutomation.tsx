@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabaseDevice } from "@/integrations/supabase/clientDevice";
 import { CreateMeetingDialog } from "@/components/meetings/CreateMeetingDialog";
 import { useMeetings } from "@/hooks/useMeetings";
@@ -629,15 +630,32 @@ export function FollowUpAutomation({ conversationId, meetingTitle, participants 
                 </div>
               ) : (
                 <>
-                  <Input
-                    id="email-to"
-                    type="email"
-                    placeholder="recipient@example.com"
-                    value={emailRecipient}
-                    onChange={(e) => setEmailRecipient(e.target.value)}
-                  />
+                  {participantsWithEmail.length > 0 ? (
+                    <Select onValueChange={setEmailRecipient} value={emailRecipient}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a participant..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {participantsWithEmail.map((p, idx) => (
+                          <SelectItem key={idx} value={p.email!}>
+                            {p.name} ({p.email})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      id="email-to"
+                      type="email"
+                      placeholder="recipient@example.com"
+                      value={emailRecipient}
+                      onChange={(e) => setEmailRecipient(e.target.value)}
+                    />
+                  )}
                   <p className="text-xs text-amber-600">
-                    No email found for {selectedNudge?.recipient || "participants"}. Enter email address or add it in the Participants panel.
+                    {participantsWithEmail.length > 0
+                      ? `Select a participant to send to ${selectedNudge?.recipient || "assignee"}`
+                      : `No emails available. Add emails in the Participants panel first.`}
                   </p>
                 </>
               )}
