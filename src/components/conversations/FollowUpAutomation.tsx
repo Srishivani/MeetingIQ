@@ -148,8 +148,30 @@ export function FollowUpAutomation({ conversationId, meetingTitle, participants 
     }
   };
 
-  // Open common email to all participants
-  const handleSendToAll = () => {
+  // Quick send common email directly to all participants
+  const handleQuickSendToAll = () => {
+    if (!data?.follow_up_email) return;
+
+    const recipientEmails = participants
+      ?.filter((p) => p.email)
+      .map((p) => p.email!)
+      .join(",") || "";
+
+    if (!recipientEmails) {
+      toast.error("No participant emails found. Add emails in the Participants panel first.");
+      return;
+    }
+
+    const subject = encodeURIComponent(`Meeting Recap: ${meetingTitle || "Recent Meeting"}`);
+    const body = encodeURIComponent(data.follow_up_email);
+    const to = encodeURIComponent(recipientEmails);
+    
+    window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
+    toast.success(`Opening email client for ${participantsWithEmail.length} recipients...`);
+  };
+
+  // Open common email dialog to edit before sending
+  const handleEditAndSendToAll = () => {
     if (!data?.follow_up_email) return;
 
     const recipientEmails = participants
@@ -317,10 +339,22 @@ export function FollowUpAutomation({ conversationId, meetingTitle, participants 
                             </>
                           )}
                         </Button>
-                        <Button size="sm" onClick={handleSendToAll}>
-                          <Users className="h-4 w-4 mr-1.5" />
-                          Send to All ({participantsWithEmail.length})
-                        </Button>
+                        {participantsWithEmail.length > 0 ? (
+                          <>
+                            <Button size="sm" onClick={handleQuickSendToAll}>
+                              <Mail className="h-4 w-4 mr-1.5" />
+                              Send to All ({participantsWithEmail.length})
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={handleEditAndSendToAll} title="Edit before sending">
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          </>
+                        ) : (
+                          <div className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Users className="h-3.5 w-3.5" />
+                            Add emails in Participants panel to send
+                          </div>
+                        )}
                       </div>
                     </div>
 
