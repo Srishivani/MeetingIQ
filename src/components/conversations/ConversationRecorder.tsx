@@ -12,8 +12,9 @@ import { formatDuration } from "@/lib/conversations";
 import { useNavigate } from "react-router-dom";
 import { 
   Mic, Upload, Pause, Play, Square, X, FileAudio, Brain, 
-  Loader2, CheckSquare, Gavel, HelpCircle, Clock 
+  Loader2, CheckSquare, Gavel, HelpCircle, Clock, AlertTriangle, RefreshCw 
 } from "lucide-react";
+import type { MeetingItemType } from "@/lib/phraseDetection";
 
 function fileTitle(prefix: string) {
   const d = new Date();
@@ -149,7 +150,7 @@ export function ConversationRecorder() {
   // Local items for live detection (before upload)
   const [liveItems, setLiveItems] = React.useState<Array<{
     id: string;
-    type: "deferred" | "action_item" | "decision" | "question";
+    type: MeetingItemType;
     content: string;
     triggerPhrase: string;
     timestampMs: number;
@@ -198,6 +199,8 @@ export function ConversationRecorder() {
     action_item: liveMeetingItems.filter((i) => i.type === "action_item"),
     decision: liveMeetingItems.filter((i) => i.type === "decision"),
     question: liveMeetingItems.filter((i) => i.type === "question"),
+    risk: liveMeetingItems.filter((i) => i.type === "risk"),
+    followup: liveMeetingItems.filter((i) => i.type === "followup"),
   }), [liveMeetingItems]);
 
   const handleRemoveLiveItem = (itemId: string) => {
@@ -418,15 +421,21 @@ export function ConversationRecorder() {
           ) : null}
         </CardContent>
         <CardFooter className="border-t bg-muted/30 text-xs text-muted-foreground">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
             <span className="flex items-center gap-1">
-              <CheckSquare className="h-3 w-3" /> Action items
+              <CheckSquare className="h-3 w-3" /> Actions
             </span>
             <span className="flex items-center gap-1">
               <Gavel className="h-3 w-3" /> Decisions
             </span>
             <span className="flex items-center gap-1">
               <HelpCircle className="h-3 w-3" /> Questions
+            </span>
+            <span className="flex items-center gap-1">
+              <AlertTriangle className="h-3 w-3" /> Risks
+            </span>
+            <span className="flex items-center gap-1">
+              <RefreshCw className="h-3 w-3" /> Follow-ups
             </span>
             <span className="flex items-center gap-1">
               <Clock className="h-3 w-3" /> Deferred
