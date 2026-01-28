@@ -1,7 +1,29 @@
 // Enhanced phrase detection patterns for real-time meeting intelligence
-export type MeetingItemType = "deferred" | "action_item" | "decision" | "question" | "risk" | "followup";
+// Supports 7 pillars: Intent-Aware, Action Intelligence, Decision Capture, 
+// Deferred Tracking, Risk Detection, Executive Summaries, Follow-Up Automation
+
+export type MeetingItemType = 
+  | "deferred" 
+  | "action_item" 
+  | "decision" 
+  | "question" 
+  | "risk" 
+  | "followup"
+  | "commitment"    // Explicit promises/pledges
+  | "concern"       // General concerns (softer than risks)
+  | "ambiguity";    // Unclear/hedging language that needs resolution
 
 export type Priority = "high" | "medium" | "low";
+
+export type IntentCategory = 
+  | "directive"     // Someone telling someone to do something
+  | "commitment"    // Someone promising to do something
+  | "deliberation"  // Discussing options
+  | "resolution"    // Concluding a discussion
+  | "deferral"      // Postponing
+  | "inquiry"       // Asking questions
+  | "concern"       // Expressing worry
+  | "ambiguous";    // Unclear intent
 
 export interface DetectedPhrase {
   type: MeetingItemType;
@@ -14,6 +36,12 @@ export interface DetectedPhrase {
   extractedDeadline: string | null;
   priority: Priority;
   confidence: number;
+  // New intent-aware fields
+  intent: IntentCategory;
+  alternativesRejected?: string[];  // For decisions
+  rationale?: string;               // Why this was detected
+  externalDependency?: string;      // External blockers
+  isHedging: boolean;               // Ambiguous/uncertain language detected
 }
 
 // Pattern definitions with trigger phrases
@@ -251,6 +279,102 @@ const PATTERNS: Array<{
       /\b(standing\s+agenda\s+item)\b/i,
     ],
   },
+  // NEW: Commitment - explicit promises/pledges (different from action items)
+  {
+    type: "commitment",
+    label: "Commitment",
+    triggers: [
+      /\b(i\s+promise)\b/i,
+      /\b(i\s+guarantee)\b/i,
+      /\b(you\s+have\s+my\s+word)\b/i,
+      /\b(i\s+commit\s+to)\b/i,
+      /\b(we('re|'re)\s+committed\s+to)\b/i,
+      /\b(i\s+pledge)\b/i,
+      /\b(count\s+on\s+(me|us))\b/i,
+      /\b(i('ll|'ll)\s+make\s+(sure|certain))\b/i,
+      /\b(you\s+can\s+rely\s+on)\b/i,
+      /\b(i\s+take\s+responsibility)\b/i,
+      /\b(i\s+own\s+(this|that|it))\b/i,
+      /\b(we('ll|'ll)\s+deliver)\b/i,
+      /\b(guaranteed\s+by)\b/i,
+      /\b(no\s+matter\s+what)\b/i,
+      /\b(come\s+hell\s+or\s+high\s+water)\b/i,
+    ],
+  },
+  // NEW: Concern - softer than risk, general worry
+  {
+    type: "concern",
+    label: "Concern",
+    triggers: [
+      /\b(i('m|'m)\s+not\s+sure\s+(if|about|that))\b/i,
+      /\b(that\s+worries\s+me)\b/i,
+      /\b(i\s+have\s+(a\s+)?reservations?\s+about)\b/i,
+      /\b(i('m|'m)\s+skeptical)\b/i,
+      /\b(i\s+have\s+(some\s+)?doubts)\b/i,
+      /\b(not\s+entirely\s+comfortable)\b/i,
+      /\b(gives\s+me\s+pause)\b/i,
+      /\b(makes\s+me\s+nervous)\b/i,
+      /\b(i('m|'m)\s+hesitant)\b/i,
+      /\b(a\s+bit\s+uneasy)\b/i,
+      /\b(i\s+question\s+whether)\b/i,
+      /\b(not\s+fully\s+confident)\b/i,
+    ],
+  },
+  // NEW: Ambiguity - hedging language that needs clarification
+  {
+    type: "ambiguity",
+    label: "Ambiguity",
+    triggers: [
+      /\b(probably)\b/i,
+      /\b(maybe)\b/i,
+      /\b(might)\b/i,
+      /\b(could\s+be)\b/i,
+      /\b(sort\s+of)\b/i,
+      /\b(kind\s+of)\b/i,
+      /\b(i\s+think)\b/i,
+      /\b(i\s+guess)\b/i,
+      /\b(not\s+exactly\s+sure)\b/i,
+      /\b(hard\s+to\s+say)\b/i,
+      /\b(it\s+depends)\b/i,
+      /\b(potentially)\b/i,
+      /\b(in\s+theory)\b/i,
+      /\b(ideally)\b/i,
+      /\b(hopefully)\b/i,
+      /\b(with\s+any\s+luck)\b/i,
+      /\b(fingers\s+crossed)\b/i,
+      /\b(should\s+be\s+fine)\b/i,
+      /\b(we('ll|'ll)\s+see)\b/i,
+      /\b(let('s|'s)\s+see\s+how\s+it\s+goes)\b/i,
+      /\b(tbd|TBD)\b/i,
+      /\b(still\s+figuring\s+out)\b/i,
+      /\b(up\s+in\s+the\s+air)\b/i,
+      /\b(unclear\s+at\s+this\s+point)\b/i,
+    ],
+  },
+];
+
+// External dependency patterns
+const DEPENDENCY_PATTERNS: RegExp[] = [
+  /\b(waiting\s+(on|for)\s+\w+)\b/i,
+  /\b(depends\s+on\s+\w+)\b/i,
+  /\b(blocked\s+by\s+\w+)\b/i,
+  /\b(need\s+\w+\s+to\s+(approve|sign\s+off))\b/i,
+  /\b(pending\s+\w+('s|'s)?\s+(approval|input|feedback))\b/i,
+  /\b(once\s+\w+\s+(finishes|completes|delivers))\b/i,
+  /\b(after\s+\w+\s+(team|department)\s+reviews?)\b/i,
+  /\b(contingent\s+on)\b/i,
+  /\b(subject\s+to\s+\w+('s|'s)?\s+approval)\b/i,
+];
+
+// Hedging/uncertain language patterns
+const HEDGING_PATTERNS: RegExp[] = [
+  /\b(probably|maybe|might|could|possibly|potentially)\b/i,
+  /\b(i\s+(think|guess|believe|assume|suppose))\b/i,
+  /\b(sort\s+of|kind\s+of|somewhat|relatively)\b/i,
+  /\b(should\s+be\s+fine|hopefully|ideally)\b/i,
+  /\b(in\s+theory|on\s+paper)\b/i,
+  /\b(best\s+case|worst\s+case)\b/i,
+  /\b(ballpark|rough\s+estimate|approximately)\b/i,
 ];
 
 // Priority detection patterns
@@ -368,9 +492,57 @@ function detectPriority(text: string): Priority {
   return "medium";
 }
 
+// Detect external dependencies
+function extractDependency(text: string): string | null {
+  for (const pattern of DEPENDENCY_PATTERNS) {
+    const match = text.match(pattern);
+    if (match) {
+      return match[0];
+    }
+  }
+  return null;
+}
+
+// Detect hedging language
+function detectHedging(text: string): boolean {
+  for (const pattern of HEDGING_PATTERNS) {
+    if (pattern.test(text)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// Map type to intent category
+function mapTypeToIntent(type: MeetingItemType): IntentCategory {
+  switch (type) {
+    case "action_item":
+      return "directive";
+    case "commitment":
+      return "commitment";
+    case "decision":
+      return "resolution";
+    case "deferred":
+      return "deferral";
+    case "question":
+      return "inquiry";
+    case "risk":
+    case "concern":
+      return "concern";
+    case "ambiguity":
+      return "ambiguous";
+    case "followup":
+      return "directive";
+    default:
+      return "deliberation";
+  }
+}
+
 // Detect phrases in text
 export function detectPhrases(text: string, timestampMs: number): DetectedPhrase[] {
   const detected: DetectedPhrase[] = [];
+  const isHedging = detectHedging(text);
+  const externalDep = extractDependency(text);
   
   for (const pattern of PATTERNS) {
     for (const trigger of pattern.triggers) {
@@ -381,6 +553,16 @@ export function detectPhrases(text: string, timestampMs: number): DetectedPhrase
         const extractedOwner = extractOwner(text, match.index);
         const extractedDeadline = extractDeadline(text);
         const priority = detectPriority(text);
+        const intent = mapTypeToIntent(pattern.type);
+        
+        // Adjust confidence based on hedging
+        let confidence = 0.75;
+        if (isHedging && pattern.type !== "ambiguity") {
+          confidence = 0.55; // Lower confidence if hedging detected
+        }
+        if (pattern.type === "ambiguity") {
+          confidence = 0.6; // Ambiguity items are informational
+        }
         
         detected.push({
           type: pattern.type,
@@ -391,7 +573,10 @@ export function detectPhrases(text: string, timestampMs: number): DetectedPhrase
           extractedOwner,
           extractedDeadline,
           priority,
-          confidence: 0.75, // Base confidence for regex detection
+          confidence,
+          intent,
+          isHedging,
+          externalDependency: externalDep,
         });
         break; // Only one match per pattern type per text segment
       }
@@ -422,6 +607,14 @@ export function getItemTypeColor(type: MeetingItemType): string {
       return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
     case "followup":
       return "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200";
+    case "commitment":
+      return "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200";
+    case "concern":
+      return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200";
+    case "ambiguity":
+      return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200";
+    default:
+      return "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200";
   }
 }
 
@@ -440,6 +633,14 @@ export function getItemTypeIcon(type: MeetingItemType): string {
       return "AlertTriangle";
     case "followup":
       return "RefreshCw";
+    case "commitment":
+      return "Handshake";
+    case "concern":
+      return "AlertCircle";
+    case "ambiguity":
+      return "HelpCircle";
+    default:
+      return "Circle";
   }
 }
 

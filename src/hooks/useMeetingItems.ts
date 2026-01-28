@@ -198,6 +198,9 @@ export function useMeetingItems(conversationId: string | null) {
       question: [],
       risk: [],
       followup: [],
+      commitment: [],
+      concern: [],
+      ambiguity: [],
     };
     for (const item of items) {
       if (groups[item.type]) {

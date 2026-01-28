@@ -13,7 +13,7 @@ import { getItemTypeLabel, type MeetingItemType } from "@/lib/phraseDetection";
 import { 
   Brain, MessageSquare, Loader2, Send, CheckSquare, 
   Gavel, HelpCircle, Clock, Sparkles, Quote, Lightbulb,
-  AlertTriangle, RefreshCw
+  AlertTriangle, RefreshCw, Handshake, AlertCircle
 } from "lucide-react";
 
 const ITEM_ICONS: Record<MeetingItemType, React.ReactNode> = {
@@ -23,6 +23,9 @@ const ITEM_ICONS: Record<MeetingItemType, React.ReactNode> = {
   deferred: <Clock className="h-4 w-4" />,
   risk: <AlertTriangle className="h-4 w-4" />,
   followup: <RefreshCw className="h-4 w-4" />,
+  commitment: <Handshake className="h-4 w-4" />,
+  concern: <AlertCircle className="h-4 w-4" />,
+  ambiguity: <HelpCircle className="h-4 w-4" />,
 };
 
 const ITEM_STYLES: Record<MeetingItemType, string> = {
@@ -32,6 +35,9 @@ const ITEM_STYLES: Record<MeetingItemType, string> = {
   deferred: "border-amber-500/30 bg-amber-500/5",
   risk: "border-red-500/30 bg-red-500/5",
   followup: "border-cyan-500/30 bg-cyan-500/5",
+  commitment: "border-emerald-500/30 bg-emerald-500/5",
+  concern: "border-orange-500/30 bg-orange-500/5",
+  ambiguity: "border-gray-500/30 bg-gray-500/5",
 };
 
 const BADGE_STYLES: Record<MeetingItemType, string> = {
@@ -41,6 +47,9 @@ const BADGE_STYLES: Record<MeetingItemType, string> = {
   deferred: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
   risk: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
   followup: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-500/20",
+  commitment: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
+  concern: "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20",
+  ambiguity: "bg-gray-500/10 text-gray-700 dark:text-gray-400 border-gray-500/20",
 };
 
 export function ConversationIntelligence({ conversationId }: { conversationId: string }) {

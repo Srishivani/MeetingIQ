@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Clock, CheckSquare, Gavel, HelpCircle, X, Sparkles, Radio, AlertTriangle, RefreshCw } from "lucide-react";
+import { Clock, CheckSquare, Gavel, HelpCircle, X, Sparkles, Radio, AlertTriangle, RefreshCw, Handshake, AlertCircle } from "lucide-react";
 import { formatDuration } from "@/lib/conversations";
 import { getItemTypeLabel, type MeetingItemType } from "@/lib/phraseDetection";
 import type { MeetingItem } from "@/hooks/useMeetingItems";
@@ -22,6 +22,9 @@ const ICONS: Record<MeetingItemType, React.ReactNode> = {
   question: <HelpCircle className="h-3.5 w-3.5" />,
   risk: <AlertTriangle className="h-3.5 w-3.5" />,
   followup: <RefreshCw className="h-3.5 w-3.5" />,
+  commitment: <Handshake className="h-3.5 w-3.5" />,
+  concern: <AlertCircle className="h-3.5 w-3.5" />,
+  ambiguity: <HelpCircle className="h-3.5 w-3.5" />,
 };
 
 const TYPE_STYLES: Record<MeetingItemType, string> = {
@@ -31,6 +34,9 @@ const TYPE_STYLES: Record<MeetingItemType, string> = {
   deferred: "border-amber-500/30 bg-amber-500/5",
   risk: "border-red-500/30 bg-red-500/5",
   followup: "border-cyan-500/30 bg-cyan-500/5",
+  commitment: "border-emerald-500/30 bg-emerald-500/5",
+  concern: "border-orange-500/30 bg-orange-500/5",
+  ambiguity: "border-gray-500/30 bg-gray-500/5",
 };
 
 const BADGE_STYLES: Record<MeetingItemType, string> = {
@@ -40,6 +46,9 @@ const BADGE_STYLES: Record<MeetingItemType, string> = {
   deferred: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
   risk: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
   followup: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-500/20",
+  commitment: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
+  concern: "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20",
+  ambiguity: "bg-gray-500/10 text-gray-700 dark:text-gray-400 border-gray-500/20",
 };
 
 function ItemCard({ item, onRemove }: { item: MeetingItem; onRemove?: (id: string) => void }) {
