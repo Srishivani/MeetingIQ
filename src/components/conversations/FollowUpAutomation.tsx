@@ -350,10 +350,15 @@ export function FollowUpAutomation({ conversationId, meetingTitle, participants 
                             </Button>
                           </>
                         ) : (
-                          <div className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Users className="h-3.5 w-3.5" />
-                            Add emails in Participants panel to send
-                          </div>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={handleEditAndSendToAll}
+                            className="text-xs"
+                          >
+                            <Mail className="h-3.5 w-3.5 mr-1.5" />
+                            Send Email to All Participants
+                          </Button>
                         )}
                       </div>
                     </div>
