@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { supabaseDevice } from "@/integrations/supabase/clientDevice";
 import { 
   Mail, Calendar, Bell, Loader2, Copy, Check, 
-  Send, User, Clock, ListChecks, RefreshCw
+  Send, User, Clock, ListChecks, RefreshCw, ExternalLink
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -25,7 +25,18 @@ interface FollowUpData {
   executive_summary: string | null;
 }
 
-export function FollowUpAutomation({ conversationId }: { conversationId: string }) {
+interface Participant {
+  name: string;
+  email?: string | null;
+}
+
+interface FollowUpAutomationProps {
+  conversationId: string;
+  meetingTitle?: string;
+  participants?: Participant[];
+}
+
+export function FollowUpAutomation({ conversationId, meetingTitle, participants }: FollowUpAutomationProps) {
   const [data, setData] = React.useState<FollowUpData | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isRegenerating, setIsRegenerating] = React.useState(false);
@@ -89,6 +100,25 @@ export function FollowUpAutomation({ conversationId }: { conversationId: string 
       toast.success("Agenda copied to clipboard");
       setTimeout(() => setCopiedAgenda(false), 2000);
     }
+  };
+
+  const handleSendEmail = () => {
+    if (!data?.follow_up_email) return;
+
+    // Build recipient list from participants with emails
+    const recipientEmails = participants
+      ?.filter((p) => p.email)
+      .map((p) => p.email!)
+      .join(",") || "";
+
+    const subject = encodeURIComponent(
+      `Meeting Recap: ${meetingTitle || "Recent Meeting"}`
+    );
+    const body = encodeURIComponent(data.follow_up_email);
+
+    const mailtoUrl = `mailto:${recipientEmails}?subject=${subject}&body=${body}`;
+    window.location.href = mailtoUrl;
+    toast.success("Opening email client...");
   };
 
   if (isLoading) {
@@ -185,19 +215,25 @@ export function FollowUpAutomation({ conversationId }: { conversationId: string 
                       <Mail className="h-4 w-4" />
                       <span>Ready-to-send meeting recap</span>
                     </div>
-                    <Button variant="outline" size="sm" onClick={handleCopyEmail}>
-                      {copiedEmail ? (
-                        <>
-                          <Check className="h-4 w-4 mr-1.5 text-green-500" />
-                          Copied!
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="h-4 w-4 mr-1.5" />
-                          Copy Email
-                        </>
-                      )}
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button variant="outline" size="sm" onClick={handleCopyEmail}>
+                        {copiedEmail ? (
+                          <>
+                            <Check className="h-4 w-4 mr-1.5 text-green-500" />
+                            Copied!
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-4 w-4 mr-1.5" />
+                            Copy
+                          </>
+                        )}
+                      </Button>
+                      <Button size="sm" onClick={handleSendEmail}>
+                        <ExternalLink className="h-4 w-4 mr-1.5" />
+                        Send Email
+                      </Button>
+                    </div>
                   </div>
 
                   <ScrollArea className="h-[300px] rounded-lg border bg-muted/20 p-4">
