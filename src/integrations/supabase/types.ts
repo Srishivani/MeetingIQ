@@ -100,6 +100,137 @@ export type Database = {
           },
         ]
       }
+      meeting_participants: {
+        Row: {
+          created_at: string
+          device_key: string
+          email: string | null
+          id: string
+          meeting_id: string
+          name: string
+          role: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          device_key: string
+          email?: string | null
+          id?: string
+          meeting_id: string
+          name: string
+          role?: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          device_key?: string
+          email?: string | null
+          id?: string
+          meeting_id?: string
+          name?: string
+          role?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_participants_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meeting_types: {
+        Row: {
+          color: string
+          created_at: string
+          icon: string
+          id: string
+          name: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          icon?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          icon?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      meetings: {
+        Row: {
+          agenda: Json | null
+          conversation_id: string | null
+          created_at: string
+          description: string | null
+          device_key: string
+          duration_minutes: number
+          id: string
+          location: string | null
+          location_type: string
+          meeting_type_id: string | null
+          scheduled_at: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          agenda?: Json | null
+          conversation_id?: string | null
+          created_at?: string
+          description?: string | null
+          device_key: string
+          duration_minutes?: number
+          id?: string
+          location?: string | null
+          location_type?: string
+          meeting_type_id?: string | null
+          scheduled_at: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          agenda?: Json | null
+          conversation_id?: string | null
+          created_at?: string
+          description?: string | null
+          device_key?: string
+          duration_minutes?: number
+          id?: string
+          location?: string | null
+          location_type?: string
+          meeting_type_id?: string | null
+          scheduled_at?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meetings_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meetings_meeting_type_id_fkey"
+            columns: ["meeting_type_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       summaries: {
         Row: {
           action_items: string[] | null
