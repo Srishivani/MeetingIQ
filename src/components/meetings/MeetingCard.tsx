@@ -291,14 +291,14 @@ export function MeetingCard({
       </Card>
 
       {/* Edit Meeting Dialog */}
-      {onUpdateMeeting && onAddParticipant && onRemoveParticipant && onUpdateParticipant && (
+      {onUpdateMeeting && (
         <EditMeetingDialog
           meeting={meeting}
           meetingTypes={meetingTypes}
           onUpdateMeeting={onUpdateMeeting}
-          onAddParticipant={onAddParticipant}
-          onRemoveParticipant={onRemoveParticipant}
-          onUpdateParticipant={onUpdateParticipant}
+          onAddParticipant={onAddParticipant || (async () => {})}
+          onRemoveParticipant={onRemoveParticipant || (async () => {})}
+          onUpdateParticipant={onUpdateParticipant || (async () => {})}
           open={editOpen}
           onOpenChange={setEditOpen}
         />
