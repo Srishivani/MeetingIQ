@@ -1,104 +1,55 @@
 
-# Plan: Enhance Dashboard Recording with Real-Time Transcription
 
-## Overview
-Upgrade the "Record Meeting" dialog on the dashboard to match the landing page's instant recorder experience, featuring ElevenLabs real-time transcription and a live transcript panel.
+# Plan: Replace Manual Email Input with Participant Selection Dropdown
 
-## Current Situation
-| Feature | Landing Page (InstantRecorder) | Dashboard (ConversationRecorder) |
-|---------|-------------------------------|----------------------------------|
-| Transcription Engine | ElevenLabs Scribe (via `useRealtimeTranscription`) | Browser Web Speech API |
-| Live Transcript Panel | Yes - scrollable with partial text | No |
-| UI Style | Large centered buttons, modern card | Traditional form layout |
-| Naming Dialog | Yes - after recording stops | No - auto-generates title |
+## Summary
+Replace the text input field in the task nudge email dialog with a dropdown selector that lets you pick from existing meeting participants' emails instead of typing manually.
 
-## Implementation Steps
+## What Changes
 
-### Step 1: Update ConversationRecorder to Use ElevenLabs Transcription
-Replace the Web Speech API hook with the existing `useRealtimeTranscription` hook that powers the landing page.
+### Current Behavior
+When sending a task nudge email for an assignee without a matched email, you see a text input where you must type an email address manually.
 
-**Changes to `src/components/conversations/ConversationRecorder.tsx`:**
-- Remove the `useSpeechRecognition` hook (lines 48-134)
-- Import and use `useRealtimeTranscription` from `@/hooks/useRealtimeTranscription`
-- Start both recording and transcription together (like InstantRecorder does)
-- Stop both when the user stops recording
+### New Behavior
+Instead of typing, you'll see a dropdown showing all participants who have email addresses. Select one and the email will be auto-filled.
 
-### Step 2: Add Live Transcript Panel
-Add the same live transcript display panel that shows real-time transcription during recording.
+## Implementation Details
 
-**Add to ConversationRecorder:**
-- Display a scrollable transcript area showing committed transcripts and partial text
-- Show a "Transcribing" status indicator when connected
-- Include the pulsing green dot for active transcription
+### File: `src/components/conversations/FollowUpAutomation.tsx`
 
-### Step 3: Update Recording Controls UI
-Modernize the recording controls to match the landing page experience.
+**1. Add Select component imports**
+- Import `Select`, `SelectContent`, `SelectItem`, `SelectTrigger`, `SelectValue` from the UI components
 
-**UI Improvements:**
-- Add visual transcription status badge alongside recording status
-- Show transcript preview in the save dialog (before processing)
-- Display detected item counts in the save confirmation
+**2. Update the email dialog "To" field**
+- Replace the manual `Input` field (lines 631-641) with a `Select` dropdown
+- Populate options from `participants` array (those with valid emails)
+- Show participant name and email in each option for easy identification
+- When a participant is selected, set `emailRecipient` to their email address
 
-### Step 4: Add Post-Recording Title Dialog
-Add the same naming dialog that appears after recording stops.
+**3. Handle edge cases**
+- If no participants have emails, show a message directing users to add emails in the Participants panel
+- Keep the current "from meeting" display when an email was auto-matched successfully
 
-**Features:**
-- Auto-generated meeting title with timestamp
-- Editable title input
-- Preview of transcript and detected items
-- Save & Process or Discard options
-
-## Technical Details
-
-### Files to Modify
-
-| File | Change |
-|------|--------|
-| `src/components/conversations/ConversationRecorder.tsx` | Replace Web Speech API with ElevenLabs, add transcript panel, add naming dialog |
-
-### Key Code Changes
-
-```text
-1. Remove useSpeechRecognition hook (local Web Speech API implementation)
-2. Import useRealtimeTranscription hook
-3. Add state for naming dialog (showNameDialog, meetingTitle, pendingBlob)
-4. Create handleStart() that calls both startRecording() and startTranscription()
-5. Create handleStop() that calls both stopRecording() and stopTranscription()
-6. Add Live Transcript panel (Card with ScrollArea showing transcripts)
-7. Add Dialog for naming the meeting before processing
+### Visual Layout
+```
+┌─────────────────────────────────────────────────┐
+│ To                                              │
+│ ┌─────────────────────────────────────────────┐ │
+│ │ Select a participant...              ▼      │ │
+│ └─────────────────────────────────────────────┘ │
+│   ┌───────────────────────────────────────────┐ │
+│   │ John Smith (john@example.com)             │ │
+│   │ Jane Doe (jane@example.com)               │ │
+│   │ Mike Wilson (mike@example.com)            │ │
+│   └───────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────┘
 ```
 
-### Component Structure After Changes
+## Technical Notes
 
-```text
-ConversationRecorder
-+-- Recording Card (existing, updated controls)
-|   +-- Status Badge with Transcription Indicator
-|   +-- Recording Duration Timer
-|   +-- Control Buttons (Start/Pause/Stop)
-|
-+-- Live Transcript Panel (NEW)
-|   +-- Connection Status Indicator
-|   +-- ScrollArea with transcript text
-|   +-- Partial text (italic, in progress)
-|
-+-- Live Detection Panel (existing)
-|
-+-- Naming Dialog (NEW)
-    +-- Title Input
-    +-- Transcript Preview
-    +-- Detected Items Summary
-    +-- Save/Discard Buttons
-```
+- Uses existing `participants` prop already passed to `FollowUpAutomation`
+- Filters to only show participants with valid email addresses
+- The `Select` component from Radix UI is already available in the project
+- No database changes required
+- No new dependencies needed
 
-## Benefits
-- Consistent experience across dashboard and landing page
-- More reliable transcription with ElevenLabs vs browser Web Speech API
-- Users can see what's being transcribed in real-time
-- Ability to name meetings before processing
-- Preview of detected items before saving
-
-## Dependencies
-- Uses existing `useRealtimeTranscription` hook (no new dependencies)
-- Requires the `scribe-token` edge function (already deployed)
-- Uses existing `LiveMeetingPanel` component (no changes needed)
