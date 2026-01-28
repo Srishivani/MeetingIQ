@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { supabaseDevice } from "@/integrations/supabase/clientDevice";
 import { useConversationBackend } from "@/hooks/useConversationBackend";
 import { formatDuration } from "@/lib/conversations";
+import { FileText, Brain, MessageSquare, Loader2, Send } from "lucide-react";
 
 export function ConversationIntelligence({ conversationId }: { conversationId: string }) {
   const [transcript, setTranscript] = React.useState<Array<{ text: string; start_ms: number; end_ms: number }>>([]);
@@ -78,8 +79,14 @@ export function ConversationIntelligence({ conversationId }: { conversationId: s
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Intelligence</CardTitle>
-          <CardDescription>Loading transcript and summary…</CardDescription>
+          <div className="flex items-center gap-2">
+            <Brain className="h-5 w-5 text-primary" />
+            <CardTitle>Meeting Intelligence</CardTitle>
+          </div>
+          <CardDescription className="flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Loading transcript and summary…
+          </CardDescription>
         </CardHeader>
       </Card>
     );
@@ -89,7 +96,10 @@ export function ConversationIntelligence({ conversationId }: { conversationId: s
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Intelligence</CardTitle>
+          <div className="flex items-center gap-2">
+            <Brain className="h-5 w-5 text-primary" />
+            <CardTitle>Meeting Intelligence</CardTitle>
+          </div>
           <CardDescription className="text-destructive">{error}</CardDescription>
         </CardHeader>
       </Card>
@@ -99,15 +109,27 @@ export function ConversationIntelligence({ conversationId }: { conversationId: s
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Intelligence</CardTitle>
-        <CardDescription>Transcript, structured summary, and conversational Q&A with citations.</CardDescription>
+        <div className="flex items-center gap-2">
+          <Brain className="h-5 w-5 text-primary" />
+          <CardTitle>Meeting Intelligence</CardTitle>
+        </div>
+        <CardDescription>Full transcript, AI-generated summary, and Q&A with citations.</CardDescription>
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="transcript">
-          <TabsList>
-            <TabsTrigger value="transcript">Transcript</TabsTrigger>
-            <TabsTrigger value="summary">Summary</TabsTrigger>
-            <TabsTrigger value="ask">Ask</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="transcript" className="gap-1.5">
+              <FileText className="h-4 w-4" />
+              Transcript
+            </TabsTrigger>
+            <TabsTrigger value="summary" className="gap-1.5">
+              <Brain className="h-4 w-4" />
+              Summary
+            </TabsTrigger>
+            <TabsTrigger value="ask" className="gap-1.5">
+              <MessageSquare className="h-4 w-4" />
+              Ask
+            </TabsTrigger>
           </TabsList>
           <TabsContent value="transcript" className="pt-4 space-y-2">
             {transcript.length === 0 ? (
@@ -187,12 +209,13 @@ export function ConversationIntelligence({ conversationId }: { conversationId: s
               </>
             )}
           </TabsContent>
-          <TabsContent value="ask" className="pt-4 space-y-3">
+          <TabsContent value="ask" className="pt-4 space-y-4">
             <div className="flex gap-2">
               <Input
-                placeholder="Ask a question about this conversation..."
+                placeholder="Ask a question about this meeting..."
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
+                className="flex-1"
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault();
@@ -201,28 +224,40 @@ export function ConversationIntelligence({ conversationId }: { conversationId: s
                 }}
               />
               <Button onClick={() => void handleAsk()} disabled={isAsking || !question.trim()}>
-                {isAsking ? "Asking…" : "Ask"}
+                {isAsking ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
               </Button>
             </div>
 
-            <div className="space-y-4">
-              {answers.map((ans, i) => (
-                <div key={i} className="rounded-md border bg-card p-3">
-                  <div className="text-sm font-medium">{ans.question}</div>
-                  <div className="mt-2 text-sm text-muted-foreground">{ans.answer}</div>
-                  {ans.citations.length > 0 ? (
-                    <div className="mt-2 space-y-1 border-t pt-2 text-xs text-muted-foreground">
-                      <div className="font-semibold">Citations:</div>
-                      {ans.citations.map((c, ci) => (
-                        <div key={ci}>
-                          [{formatDuration(c.timestamp_ms)}] {c.text.slice(0, 60)}…
-                        </div>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-              ))}
-            </div>
+            {answers.length === 0 ? (
+              <div className="rounded-lg border bg-muted/30 p-6 text-center">
+                <MessageSquare className="mx-auto h-10 w-10 text-muted-foreground/50" />
+                <p className="mt-2 text-sm font-medium text-muted-foreground">Ask anything about this meeting</p>
+                <p className="text-xs text-muted-foreground">Answers will cite specific parts of the transcript</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {answers.map((ans, i) => (
+                  <div key={i} className="rounded-lg border bg-card p-4">
+                    <div className="font-medium text-foreground">{ans.question}</div>
+                    <div className="mt-2 text-sm text-muted-foreground leading-relaxed">{ans.answer}</div>
+                    {ans.citations.length > 0 ? (
+                      <div className="mt-3 space-y-1 border-t pt-3">
+                        <div className="text-xs font-semibold text-muted-foreground">Citations:</div>
+                        {ans.citations.map((c, ci) => (
+                          <div key={ci} className="rounded bg-muted/50 px-2 py-1 text-xs text-muted-foreground">
+                            <span className="font-mono">[{formatDuration(c.timestamp_ms)}]</span> {c.text.slice(0, 80)}…
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </CardContent>

@@ -5,11 +5,15 @@ import { Progress } from "@/components/ui/progress";
 import { useMediaRecorder } from "@/hooks/useMediaRecorder";
 import { useConversationBackend } from "@/hooks/useConversationBackend";
 import { useMeetingItems } from "@/hooks/useMeetingItems";
-import { detectPhrases, type DetectedPhrase } from "@/lib/phraseDetection";
+import { detectPhrases } from "@/lib/phraseDetection";
 import { LiveMeetingPanel } from "@/components/conversations/LiveMeetingPanel";
 import type { ConversationRecord } from "@/lib/conversations";
 import { formatDuration } from "@/lib/conversations";
 import { useNavigate } from "react-router-dom";
+import { 
+  Mic, Upload, Pause, Play, Square, X, FileAudio, Brain, 
+  Loader2, CheckSquare, Gavel, HelpCircle, Clock 
+} from "lucide-react";
 
 function fileTitle(prefix: string) {
   const d = new Date();
@@ -270,44 +274,63 @@ export function ConversationRecorder() {
 
   return (
     <div className="space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>New conversation</CardTitle>
-          <CardDescription>Record or upload audio. Real-time phrase detection will identify action items, decisions, and more.</CardDescription>
+      <Card className="overflow-hidden">
+        <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent">
+          <div className="flex items-center gap-2">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground">
+              <Mic className="h-5 w-5" />
+            </div>
+            <div>
+              <CardTitle>New Meeting</CardTitle>
+              <CardDescription>Record or upload audio. Real-time detection identifies key meeting items.</CardDescription>
+            </div>
+          </div>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 pt-6">
           {error ? <div className="text-sm text-destructive">{error}</div> : null}
 
-          <div className="flex flex-wrap items-center gap-2">
+          {/* Recording Controls */}
+          <div className="flex flex-wrap items-center gap-3">
             {state === "idle" ? (
-              <Button onClick={start}>Start recording</Button>
+              <>
+                <Button onClick={start} size="lg" className="gap-2">
+                  <Mic className="h-4 w-4" />
+                  Start Recording
+                </Button>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="gap-2"
+                  onClick={() => inputRef.current?.click()}
+                  disabled={isSaving}
+                >
+                  <Upload className="h-4 w-4" />
+                  Upload Audio
+                </Button>
+              </>
             ) : (
               <>
                 {state === "recording" ? (
-                  <Button variant="secondary" onClick={pause}>
+                  <Button variant="secondary" size="lg" onClick={pause} className="gap-2">
+                    <Pause className="h-4 w-4" />
                     Pause
                   </Button>
                 ) : (
-                  <Button variant="secondary" onClick={resume}>
+                  <Button variant="secondary" size="lg" onClick={resume} className="gap-2">
+                    <Play className="h-4 w-4" />
                     Resume
                   </Button>
                 )}
-                <Button variant="default" onClick={stop}>
+                <Button size="lg" onClick={stop} className="gap-2">
+                  <Square className="h-4 w-4" />
                   Stop
                 </Button>
-                <Button variant="outline" onClick={handleReset}>
+                <Button variant="ghost" onClick={handleReset} className="text-muted-foreground">
+                  <X className="h-4 w-4 mr-1" />
                   Discard
                 </Button>
               </>
             )}
-
-            <Button
-              variant="outline"
-              onClick={() => inputRef.current?.click()}
-              disabled={isSaving || state !== "idle"}
-            >
-              Upload audio
-            </Button>
             <input
               ref={inputRef}
               type="file"
@@ -321,45 +344,94 @@ export function ConversationRecorder() {
             />
           </div>
 
-          <div className="text-sm text-muted-foreground">
-            {state === "idle" ? "Ready" : `Recording • ${formatDuration(durationMs)}`}
-          </div>
+          {/* Recording Status */}
+          {state !== "idle" && (
+            <div className="flex items-center gap-3 rounded-lg bg-muted/50 p-4">
+              <div className="relative flex h-12 w-12 items-center justify-center">
+                {state === "recording" && (
+                  <>
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-destructive/40" />
+                    <span className="relative flex h-4 w-4 rounded-full bg-destructive" />
+                  </>
+                )}
+                {state === "paused" && (
+                  <Pause className="h-6 w-6 text-muted-foreground" />
+                )}
+              </div>
+              <div>
+                <div className="font-medium">
+                  {state === "recording" ? "Recording in progress" : "Recording paused"}
+                </div>
+                <div className="text-2xl font-mono font-bold text-primary">
+                  {formatDuration(durationMs)}
+                </div>
+              </div>
+            </div>
+          )}
 
+          {/* Audio Preview */}
           {candidateBlob && previewUrl ? (
-            <div className="space-y-3">
+            <div className="space-y-4 rounded-lg border bg-muted/30 p-4">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <FileAudio className="h-4 w-4 text-primary" />
+                Meeting Recording Ready
+              </div>
               <audio controls src={previewUrl} className="w-full" />
               <div className="flex flex-wrap gap-2">
                 <Button
+                  size="lg"
+                  className="gap-2"
                   onClick={() => {
-                    const title = uploadedBlob ? uploadedTitle : fileTitle("Recording");
+                    const title = uploadedBlob ? uploadedTitle : fileTitle("Meeting");
                     void saveBlob(candidateBlob, title);
                   }}
                   disabled={isSaving}
                 >
-                  Upload + Transcribe + Summarize
+                  <Brain className="h-4 w-4" />
+                  Process Meeting
                 </Button>
                 <Button
                   variant="outline"
                   onClick={handleReset}
                   disabled={isSaving}
                 >
-                  Record again
+                  Record Again
                 </Button>
               </div>
             </div>
           ) : null}
 
+          {/* Upload Progress */}
           {isSaving ? (
-            <div className="space-y-2">
-              <div className="text-sm text-muted-foreground">
-                Uploading to backend…
+            <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                Processing your meeting…
               </div>
-              <Progress value={saveProgress} />
+              <Progress value={saveProgress} className="h-2" />
+              <div className="text-xs text-muted-foreground">
+                {saveProgress < 50 ? "Uploading audio..." : 
+                 saveProgress < 80 ? "Transcribing..." : 
+                 "Generating summary..."}
+              </div>
             </div>
           ) : null}
         </CardContent>
-        <CardFooter className="text-xs text-muted-foreground">
-          Upload to the backend to unlock transcription, AI summaries, and Q&A with citations.
+        <CardFooter className="border-t bg-muted/30 text-xs text-muted-foreground">
+          <div className="flex items-center gap-4">
+            <span className="flex items-center gap-1">
+              <CheckSquare className="h-3 w-3" /> Action items
+            </span>
+            <span className="flex items-center gap-1">
+              <Gavel className="h-3 w-3" /> Decisions
+            </span>
+            <span className="flex items-center gap-1">
+              <HelpCircle className="h-3 w-3" /> Questions
+            </span>
+            <span className="flex items-center gap-1">
+              <Clock className="h-3 w-3" /> Deferred
+            </span>
+          </div>
         </CardFooter>
       </Card>
 
