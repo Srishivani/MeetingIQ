@@ -66,7 +66,7 @@ const Index = () => {
 
             <div className="flex flex-wrap items-center gap-3">
               <Button asChild size="lg" variant="secondary" className="gap-2">
-                <Link to="/quick">
+                <Link to="/">
                   <Zap className="h-5 w-5" />
                   Quick Record
                 </Link>
