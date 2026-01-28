@@ -319,7 +319,13 @@ const Conversation = () => {
               </TabsContent>
 
               <TabsContent value="followup">
-                {id ? <FollowUpAutomation conversationId={id} /> : null}
+                {id ? (
+                  <FollowUpAutomation 
+                    conversationId={id} 
+                    meetingTitle={title}
+                    participants={linkedMeeting?.participants?.map(p => ({ name: p.name, email: p.email }))}
+                  />
+                ) : null}
               </TabsContent>
 
               <TabsContent value="transcript">
